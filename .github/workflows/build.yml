@@ -6,8 +6,8 @@ on:
       - 'v*'
   workflow_dispatch:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -36,7 +36,7 @@ jobs:
         with:
           node-version: 22
 
-      - name: Setup pnpm
+      - name: Install pnpm
         run: npm install -g pnpm@9
 
       - name: Install frontend dependencies
@@ -52,45 +52,8 @@ jobs:
         with:
           workspaces: src-tauri
 
-      # macOS: Set up signing certificate
-      - name: Import Apple certificate
-        if: startsWith(matrix.platform, 'macos')
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-        run: |
-          if [ -n "$APPLE_CERTIFICATE" ]; then
-            KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
-            echo $APPLE_CERTIFICATE | base64 --decode > certificate.p12
-            security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
-            security default-keychain -s build.keychain
-            security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
-            security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-            security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
-            rm certificate.p12
-          fi
-
-      # macOS: Write the API key file for notarization
-      - name: Setup Apple API key
-        if: startsWith(matrix.platform, 'macos')
-        env:
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
-          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-        run: |
-          if [ -n "$APPLE_API_KEY" ]; then
-            mkdir -p ~/private_keys
-            echo "$APPLE_API_KEY" > ~/private_keys/AuthKey_${APPLE_API_KEY_ID}.p8
-          fi
-
       - name: Build Tauri app
         run: pnpm tauri build --target ${{ matrix.target }}
-        env:
-          # macOS signing
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          # macOS notarization via API key (p8)
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY_ID }}
-          APPLE_API_KEY_PATH: ~/private_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -103,7 +66,6 @@ jobs:
             src-tauri/target/${{ matrix.target }}/release/bundle/**/*.exe
           if-no-files-found: ignore
 
-  # Create a GitHub release when triggered by a tag
   release:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: build
@@ -111,7 +73,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Download all artifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
