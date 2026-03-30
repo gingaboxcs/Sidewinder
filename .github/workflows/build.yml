@@ -18,7 +18,7 @@ jobs:
           - platform: macos-latest
             target: aarch64-apple-darwin
             name: macOS-arm64
-          - platform: macos-13
+          - platform: macos-latest
             target: x86_64-apple-darwin
             name: macOS-x64
           - platform: windows-latest
@@ -52,16 +52,27 @@ jobs:
         with:
           workspaces: src-tauri
 
-      - name: Build Tauri app
+      - name: Build Tauri app (macOS)
+        if: startsWith(matrix.platform, 'macos')
+        run: pnpm tauri build --target ${{ matrix.target }} --bundles app
+
+      - name: Build Tauri app (Windows)
+        if: matrix.platform == 'windows-latest'
         run: pnpm tauri build --target ${{ matrix.target }}
+
+      # macOS: zip the .app for upload
+      - name: Zip macOS app
+        if: startsWith(matrix.platform, 'macos')
+        run: |
+          cd src-tauri/target/${{ matrix.target }}/release/bundle/macos
+          zip -r Sidewinder-${{ matrix.name }}.zip Sidewinder.app
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: sidewinder-${{ matrix.name }}
           path: |
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.dmg
-            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.app.tar.gz
+            src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.zip
             src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi
             src-tauri/target/${{ matrix.target }}/release/bundle/**/*.exe
           if-no-files-found: ignore
