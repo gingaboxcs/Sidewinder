@@ -9,6 +9,8 @@ pub struct WatcherState {
     pub active_path: Mutex<Option<String>>,
     // We keep the debouncer alive by storing it; dropping it stops watching
     pub debouncer: Mutex<Option<notify_debouncer_mini::Debouncer<notify::RecommendedWatcher>>>,
+    // Separate watcher for Elysium OpenTime directory
+    pub elysium_debouncer: Mutex<Option<notify_debouncer_mini::Debouncer<notify::RecommendedWatcher>>>,
 }
 
 #[derive(Clone, serde::Serialize)]
@@ -92,5 +94,73 @@ pub fn unwatch_vault(app: AppHandle) -> Result<(), String> {
     *debouncer = None;
     let mut active = state.active_path.lock().map_err(|e| e.to_string())?;
     *active = None;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn watch_elysium(app: AppHandle, opentime_path: String) -> Result<(), String> {
+    let state = app.state::<WatcherState>();
+
+    // Stop any existing Elysium watcher
+    {
+        let mut debouncer = state.elysium_debouncer.lock().map_err(|e| e.to_string())?;
+        *debouncer = None;
+    }
+
+    let emitter = app.clone();
+
+    let mut debouncer = new_debouncer(Duration::from_millis(500), move |events: Result<Vec<notify_debouncer_mini::DebouncedEvent>, notify::Error>| {
+        if let Ok(events) = events {
+            let mut ot_changed = false;
+            let mut notes_changed = false;
+
+            for event in events {
+                let path_str = event.path.to_string_lossy().to_string();
+                if path_str.ends_with(".ot") || path_str.ends_with(".otime") {
+                    ot_changed = true;
+                }
+                if path_str.ends_with(".md") {
+                    notes_changed = true;
+                }
+            }
+
+            if ot_changed {
+                let _ = emitter.emit("elysium-schedule-changed", ());
+            }
+            if notes_changed {
+                let _ = emitter.emit("elysium-notes-changed", ());
+            }
+        }
+    }).map_err(|e| e.to_string())?;
+
+    // Watch the OpenTime directory for .ot file changes
+    debouncer
+        .watcher()
+        .watch(Path::new(&opentime_path), RecursiveMode::NonRecursive)
+        .map_err(|e| e.to_string())?;
+
+    // Watch the Notes subdirectory recursively for .md changes
+    let notes_path = Path::new(&opentime_path).join("Notes");
+    if notes_path.exists() {
+        debouncer
+            .watcher()
+            .watch(&notes_path, RecursiveMode::Recursive)
+            .map_err(|e| e.to_string())?;
+    }
+
+    // Store the debouncer to keep it alive
+    {
+        let mut stored = state.elysium_debouncer.lock().map_err(|e| e.to_string())?;
+        *stored = Some(debouncer);
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn unwatch_elysium(app: AppHandle) -> Result<(), String> {
+    let state = app.state::<WatcherState>();
+    let mut debouncer = state.elysium_debouncer.lock().map_err(|e| e.to_string())?;
+    *debouncer = None;
     Ok(())
 }

@@ -1,5 +1,5 @@
 use crate::config;
-use crate::models::{AppConfig, NoteOverride, Vault, ViewMode};
+use crate::models::{AppConfig, EditMode, NoteOverride, SortMode, Vault, ViewMode};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -14,7 +14,7 @@ pub fn save_config_cmd(config_data: AppConfig) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn add_vault(name: String, path: String, view_mode: ViewMode, recursive: bool) -> Result<Vault, String> {
+pub fn add_vault(name: String, path: String, view_mode: ViewMode, edit_mode: EditMode, sort_mode: SortMode, recursive: bool) -> Result<Vault, String> {
     let path_buf = std::path::Path::new(&path);
     if !path_buf.exists() {
         return Err(format!("Directory does not exist: {}", path));
@@ -28,8 +28,13 @@ pub fn add_vault(name: String, path: String, view_mode: ViewMode, recursive: boo
         name,
         path,
         view_mode,
+        edit_mode,
+        sort_mode,
+        sort_descending: true,
         recursive,
         note_overrides: HashMap::new(),
+        note_order: Vec::new(),
+        folder_overrides: HashMap::new(),
     };
 
     let mut app_config = config::load_config();

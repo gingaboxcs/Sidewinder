@@ -1,5 +1,5 @@
 import { useStore } from "../../stores/store";
-import { updateNoteOverride } from "../../lib/tauri";
+import { updateNoteOverride, loadConfig } from "../../lib/tauri";
 import type { ViewMode } from "../../types";
 
 interface Props {
@@ -8,14 +8,17 @@ interface Props {
 }
 
 export function ViewModeSelector({ noteRelativePath, compact }: Props) {
-  const getActiveVault = useStore((s) => s.getActiveVault);
-  const getEffectiveViewMode = useStore((s) => s.getEffectiveViewMode);
+  // Subscribe to vaults array so we re-render when overrides change
+  const vaults = useStore((s) => s.vaults);
+  const activeVaultId = useStore((s) => s.activeVaultId);
+  const setVaults = useStore((s) => s.setVaults);
 
-  const vault = getActiveVault();
+  const vault = vaults.find((v) => v.id === activeVaultId);
   if (!vault) return null;
 
-  const currentMode = getEffectiveViewMode(noteRelativePath);
-  const hasOverride = vault.noteOverrides[noteRelativePath]?.viewMode != null;
+  const override = vault.noteOverrides[noteRelativePath];
+  const currentMode = override?.viewMode || vault.viewMode;
+  const hasOverride = override?.viewMode != null;
 
   const handleChange = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -24,16 +27,26 @@ export function ViewModeSelector({ noteRelativePath, compact }: Props) {
     const currentIdx = modes.indexOf(currentMode);
     const nextMode = modes[(currentIdx + 1) % modes.length];
 
+    // Optimistic update — merge with existing override to preserve editMode
+    const existingOverride = vault.noteOverrides[noteRelativePath] || {};
+    const mergedOverride = { ...existingOverride, viewMode: nextMode };
+    const updatedVault = {
+      ...vault,
+      noteOverrides: {
+        ...vault.noteOverrides,
+        [noteRelativePath]: mergedOverride,
+      },
+    };
+    setVaults(vaults.map((v) => v.id === vault.id ? updatedVault : v));
+
+    // Persist
     try {
-      await updateNoteOverride(vault.id, noteRelativePath, {
-        viewMode: nextMode,
-      });
-      // Reload config to reflect changes
-      const { loadConfig } = await import("../../lib/tauri");
-      const config = await loadConfig();
-      useStore.getState().setVaults(config.vaults);
+      await updateNoteOverride(vault.id, noteRelativePath, mergedOverride);
     } catch (e) {
       console.error("Failed to update note override:", e);
+      // Revert on error
+      const config = await loadConfig();
+      setVaults(config.vaults);
     }
   };
 
@@ -54,10 +67,11 @@ export function ViewModeSelector({ noteRelativePath, compact }: Props) {
   return (
     <button
       onClick={handleChange}
+      style={hasOverride ? { backgroundColor: "color-mix(in srgb, var(--accent) 30%, transparent)", color: "var(--accent)" } : undefined}
       className={`text-[10px] px-1.5 py-0.5 rounded transition-colors cursor-pointer ${
         hasOverride
-          ? "bg-blue-600/30 text-blue-300 border border-blue-500/30"
-          : "bg-slate-700/40 text-slate-500 hover:text-slate-400"
+          ? ""
+          : "bg-neutral-700/40 text-app-faint hover:text-app-muted"
       }`}
       title={`${tooltips[currentMode]}${hasOverride ? " (override)" : ""} - click to cycle`}
     >

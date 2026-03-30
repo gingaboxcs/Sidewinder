@@ -1,13 +1,152 @@
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useStore } from "../../stores/store";
-import { useNotes } from "../../hooks/useNotes";
+import { useSortedNotes } from "../../hooks/useSortedNotes";
+import { updateVault, deleteNote, deleteFolder, readNotesBatch, renameNote, listFolderContents } from "../../lib/tauri";
 import { NoteContent } from "./NoteContent";
 import { ViewModeSelector } from "../common/ViewModeSelector";
+import { EditModeSelector } from "../common/EditModeSelector";
+import { ConfirmDialog } from "../common/ConfirmDialog";
+import { MoveNoteDialog } from "./MoveNoteDialog";
+import type { EditMode, FolderEntry, ViewMode } from "../../types";
 
 export function AccordionView() {
-  const { notes, loadNoteContent } = useNotes();
+  const { notes: allNotes, loadNoteContent, sortMode, refreshNotes } = useSortedNotes();
   const expandedNotes = useStore((s) => s.expandedNotes);
   const toggleNote = useStore((s) => s.toggleNote);
   const loadedContent = useStore((s) => s.loadedContent);
+  const vaults = useStore((s) => s.vaults);
+  const activeVaultId = useStore((s) => s.activeVaultId);
+  const setVaults = useStore((s) => s.setVaults);
+  const setNoteContent = useStore((s) => s.setNoteContent);
+  const openNoteFull = useStore((s) => s.openNoteFull);
+  const currentFolderPath = useStore((s) => s.currentFolderPath);
+  const setCurrentFolderPath = useStore((s) => s.setCurrentFolderPath);
+
+  // Folder contents for browsing mode
+  const [folders, setFolders] = useState<FolderEntry[]>([]);
+
+  const vault = vaults.find((v) => v.id === activeVaultId);
+  const activePath = currentFolderPath || vault?.path || "";
+
+  // Get effective settings for current folder (folder override > vault default)
+  const folderRelPath = currentFolderPath && vault
+    ? currentFolderPath.replace(vault.path, "").replace(/^\//, "")
+    : "";
+  const folderOverride = folderRelPath && vault?.folderOverrides
+    ? vault.folderOverrides[folderRelPath]
+    : undefined;
+
+  const effectiveSortMode = folderOverride?.sortMode || sortMode;
+  const effectiveSortDescending = folderOverride?.sortDescending ?? (vault?.sortDescending ?? true);
+  const effectiveEditMode = folderOverride?.editMode || vault?.editMode || "markdown";
+  const effectiveViewMode = (folderOverride?.viewMode || vault?.viewMode || "accordion") as ViewMode;
+
+  // Load folder contents when path changes, sorted by effective settings
+  useEffect(() => {
+    if (!activePath) return;
+    listFolderContents(activePath).then(([folderList]) => {
+      const sorted = [...folderList];
+      const dir = effectiveSortDescending ? -1 : 1;
+      switch (effectiveSortMode) {
+        case "alphabetical":
+          sorted.sort((a, b) => dir * a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }));
+          break;
+        case "modified":
+          sorted.sort((a, b) => dir * (a.modifiedAt - b.modifiedAt));
+          break;
+        // manual: keep original order
+      }
+      setFolders(sorted);
+    }).catch(console.error);
+  }, [activePath, allNotes, effectiveSortMode, effectiveSortDescending]);
+
+  // Filter notes to only show ones in the current folder (not subfolders)
+  const notes = allNotes.filter((n) => {
+    const noteDir = n.absolutePath.substring(0, n.absolutePath.lastIndexOf("/"));
+    return noteDir === activePath;
+  });
+
+  const isManual = effectiveSortMode === "manual";
+
+  const getNoteViewMode = (relativePath: string): ViewMode => {
+    const override = vault?.noteOverrides[relativePath];
+    return override?.viewMode || effectiveViewMode;
+  };
+
+  const getNoteEditMode = (relativePath: string): EditMode => {
+    const override = vault?.noteOverrides[relativePath];
+    return override?.editMode || effectiveEditMode;
+  };
+
+  // Load content for always-open notes only (not all notes — that causes loops)
+  useEffect(() => {
+    if (!notes.length || !vault) return;
+    const alwaysOpenPaths = notes
+      .filter((n) => getNoteViewMode(n.relativePath) === "always-open" && loadedContent[n.absolutePath] == null)
+      .map((n) => n.absolutePath);
+    if (!alwaysOpenPaths.length) return;
+    readNotesBatch(alwaysOpenPaths).then((results) => {
+      for (const [path, content] of Object.entries(results)) {
+        setNoteContent(path, content);
+      }
+    }).catch(console.error);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notes]);
+
+  // Folder drag state
+  const [folderDragFrom, setFolderDragFrom] = useState<number | null>(null);
+  const [folderDragOver, setFolderDragOver] = useState<number | null>(null);
+  const folderEls = useRef<(HTMLDivElement | null)[]>([]);
+  const folderOverRef = useRef<number | null>(null);
+
+  // Note drag state
+  const [dragFromIdx, setDragFromIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const itemEls = useRef<(HTMLDivElement | null)[]>([]);
+  const currentOverRef = useRef<number | null>(null);
+
+  const [deletingNote, setDeletingNote] = useState<{ path: string; name: string } | null>(null);
+  const [movingNote, setMovingNote] = useState<{ path: string; name: string; isFolder?: boolean } | null>(null);
+  const saveFolderSettings = async (folderAbsPath: string, updates: Record<string, unknown>) => {
+    if (!vault) return;
+    const relPath = folderAbsPath.replace(vault.path, "").replace(/^\//, "");
+    if (!relPath) return;
+    const existing = vault.folderOverrides?.[relPath] || {};
+    const updated = {
+      ...vault,
+      folderOverrides: {
+        ...vault.folderOverrides,
+        [relPath]: { ...existing, ...updates },
+      },
+    };
+    setVaults(vaults.map((v) => v.id === vault.id ? updated : v));
+    try {
+      await updateVault(updated);
+    } catch (e) { console.error(e); }
+  };
+  const [justCreatedPath, setJustCreatedPath] = useState<string | null>(null);
+  const [renamingPath, setRenamingPath] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [renameError, setRenameError] = useState("");
+
+  // Auto-expand newly created notes and flag them for edit mode
+  const newlyCreatedNotePath = useStore((s) => s.newlyCreatedNotePath);
+  const setNewlyCreatedNotePath = useStore((s) => s.setNewlyCreatedNotePath);
+  useEffect(() => {
+    if (newlyCreatedNotePath) {
+      const note = notes.find((n) => n.absolutePath === newlyCreatedNotePath);
+      if (note) {
+        if (!expandedNotes.has(note.absolutePath)) {
+          toggleNote(note.absolutePath);
+        }
+        setJustCreatedPath(note.absolutePath);
+        // Auto-start rename with empty value so user types the title
+        setRenamingPath(note.absolutePath);
+        setRenameValue("");
+        setNewlyCreatedNotePath(null);
+      }
+    }
+  }, [newlyCreatedNotePath, notes, setNewlyCreatedNotePath, expandedNotes, toggleNote]);
 
   const handleToggle = async (absolutePath: string) => {
     toggleNote(absolutePath);
@@ -16,57 +155,431 @@ export function AccordionView() {
     }
   };
 
+  const commitReorder = useCallback((fromIdx: number, toIdx: number) => {
+    if (!vault || fromIdx === toIdx || toIdx < 0 || toIdx >= notes.length) return;
+
+    const reordered = [...notes];
+    const [moved] = reordered.splice(fromIdx, 1);
+    reordered.splice(toIdx, 0, moved);
+    const newOrder = reordered.map((n) => n.relativePath);
+
+    const updatedVault = { ...vault, noteOrder: newOrder };
+    setVaults(vaults.map((v) => v.id === vault.id ? updatedVault : v));
+    updateVault(updatedVault).catch(console.error);
+  }, [vault, notes, vaults, setVaults]);
+
+  // Folder reorder
+  const commitFolderReorder = useCallback((fromIdx: number, toIdx: number) => {
+    if (fromIdx === toIdx || toIdx < 0 || toIdx >= folders.length) return;
+    const reordered = [...folders];
+    const [moved] = reordered.splice(fromIdx, 1);
+    reordered.splice(toIdx, 0, moved);
+    setFolders(reordered);
+    // We don't persist folder order to the vault config for now — it's session-based
+    // Could be added later with a folderOrder field
+  }, [folders]);
+
+  const findClosestFolderIdx = (clientY: number): number => {
+    let closest = 0;
+    let closestDist = Infinity;
+    folderEls.current.forEach((el, i) => {
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const center = rect.top + rect.height / 2;
+      const dist = Math.abs(clientY - center);
+      if (dist < closestDist) { closestDist = dist; closest = i; }
+    });
+    return closest;
+  };
+
+  const handleFolderGripDown = (e: React.PointerEvent, idx: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFolderDragFrom(idx);
+    setFolderDragOver(idx);
+    folderOverRef.current = idx;
+
+    const startIdx = idx;
+    const onMove = (me: PointerEvent) => {
+      const over = findClosestFolderIdx(me.clientY);
+      folderOverRef.current = over;
+      setFolderDragOver(over);
+    };
+    const onUp = () => {
+      const finalOver = folderOverRef.current;
+      if (finalOver != null && finalOver !== startIdx) {
+        commitFolderReorder(startIdx, finalOver);
+      }
+      setFolderDragFrom(null);
+      setFolderDragOver(null);
+      folderOverRef.current = null;
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+    };
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  };
+
+  const findClosestIdx = (clientY: number): number => {
+    let closest = 0;
+    let closestDist = Infinity;
+    itemEls.current.forEach((el, i) => {
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const center = rect.top + rect.height / 2;
+      const dist = Math.abs(clientY - center);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closest = i;
+      }
+    });
+    return closest;
+  };
+
+  const handleGripDown = (e: React.PointerEvent, idx: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const startIdx = idx;
+    setDragFromIdx(idx);
+    setDragOverIdx(idx);
+    currentOverRef.current = idx;
+
+    const onMove = (me: PointerEvent) => {
+      const over = findClosestIdx(me.clientY);
+      currentOverRef.current = over;
+      setDragOverIdx(over);
+    };
+
+    const onUp = () => {
+      const finalOver = currentOverRef.current;
+      if (finalOver != null && finalOver !== startIdx) {
+        commitReorder(startIdx, finalOver);
+      }
+      setDragFromIdx(null);
+      setDragOverIdx(null);
+      currentOverRef.current = null;
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+    };
+
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  };
+
+  const submitRename = async () => {
+    if (!renamingPath || !renameValue.trim()) {
+      setRenamingPath(null);
+      return;
+    }
+    const note = notes.find((n) => n.absolutePath === renamingPath);
+    if (note && renameValue.trim() === note.filename) {
+      setRenamingPath(null);
+      return;
+    }
+    setRenameError("");
+    try {
+      const wasJustCreated = justCreatedPath === renamingPath;
+      const newPath = await renameNote(renamingPath, renameValue.trim());
+      setRenamingPath(null);
+      await refreshNotes();
+      // Re-expand the renamed note and keep it in edit mode
+      if (newPath) {
+        const expanded = useStore.getState().expandedNotes;
+        if (!expanded.has(newPath)) {
+          toggleNote(newPath);
+        }
+        if (wasJustCreated) {
+          setJustCreatedPath(newPath);
+        }
+      }
+    } catch (e: any) {
+      setRenameError(e?.toString() || "Failed to rename");
+    }
+  };
+
   return (
     <div className="p-3 space-y-1">
-      {notes.length === 0 ? (
-        <p className="text-slate-500 text-sm text-center py-8">
-          No notes in this vault
+      {/* Subfolders */}
+      {folders.map((folder, fIdx) => {
+        const isFolderDragging = folderDragFrom === fIdx;
+        const isFolderDropTarget = folderDragOver === fIdx && folderDragFrom !== null && folderDragFrom !== fIdx;
+
+        return (
+          <div
+            key={folder.absolutePath}
+            ref={(el) => { folderEls.current[fIdx] = el; }}
+            className={`rounded-lg border overflow-hidden ${
+              isFolderDragging ? "opacity-30 border-neutral-700/50"
+                : isFolderDropTarget ? "border-neutral-400"
+                : "border-neutral-700/50"
+            }`}
+          >
+            {isFolderDropTarget && (
+              <div style={{ height: 3, backgroundColor: "var(--accent)", marginTop: -1 }} />
+            )}
+            <div
+              onClick={() => setCurrentFolderPath(folder.absolutePath)}
+              className="flex items-center px-3 py-2.5 bg-neutral-800/40 hover:bg-neutral-800/80 cursor-pointer transition-colors"
+            >
+              {isManual && (
+                <div
+                  onPointerDown={(e) => handleFolderGripDown(e, fIdx)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="shrink-0 mr-2 cursor-grab active:cursor-grabbing text-app-faint hover:text-app-muted
+                             touch-none select-none p-1 -ml-1 rounded hover:bg-neutral-700/50"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <line x1="4" y1="6" x2="20" y2="6"/>
+                    <line x1="4" y1="12" x2="20" y2="12"/>
+                    <line x1="4" y1="18" x2="20" y2="18"/>
+                  </svg>
+                </div>
+              )}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                   className="text-app-muted shrink-0 mr-2">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+              </svg>
+              <span className="text-sm font-medium text-app truncate flex-1">{folder.name}</span>
+              <div className="flex items-center gap-1 shrink-0 ml-2">
+              {(() => {
+                const relPath = folder.absolutePath.replace(vault?.path || "", "").replace(/^\//, "");
+                const fo = vault?.folderOverrides?.[relPath] || {};
+                const fView = fo.viewMode || vault?.viewMode || "accordion";
+                const fEdit = fo.editMode || vault?.editMode || "markdown";
+                const hasViewOverride = !!fo.viewMode;
+                const hasEditOverride = !!fo.editMode;
+                const viewModes = ["accordion", "full", "always-open"];
+                const editModes = ["markdown", "code", "plaintext"];
+                return (
+                  <>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const next = viewModes[(viewModes.indexOf(fView) + 1) % viewModes.length];
+                        saveFolderSettings(folder.absolutePath, { viewMode: next });
+                      }}
+                      style={hasViewOverride ? { backgroundColor: "color-mix(in srgb, var(--accent) 30%, transparent)", color: "var(--accent)" } : undefined}
+                      className={`text-[10px] px-1.5 py-0.5 rounded transition-colors cursor-pointer ${
+                        hasViewOverride ? "" : "bg-neutral-700/40 text-app-faint hover:text-app-muted"
+                      }`}
+                      title={`View: ${fView}${hasViewOverride ? " (override)" : ""}`}
+                    >
+                      {fView === "accordion" ? "A" : fView === "full" ? "F" : "O"}
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const next = editModes[(editModes.indexOf(fEdit) + 1) % editModes.length];
+                        saveFolderSettings(folder.absolutePath, { editMode: next });
+                      }}
+                      style={hasEditOverride ? { backgroundColor: "color-mix(in srgb, var(--accent) 30%, transparent)", color: "var(--accent)" } : undefined}
+                      className={`text-[10px] px-1.5 py-0.5 rounded transition-colors cursor-pointer ${
+                        hasEditOverride ? "" : "bg-neutral-700/40 text-app-faint hover:text-app-muted"
+                      }`}
+                      title={`Edit: ${fEdit}${hasEditOverride ? " (override)" : ""}`}
+                    >
+                      {fEdit === "markdown" ? "MD" : fEdit === "code" ? "</>" : "Txt"}
+                    </button>
+                  </>
+                );
+              })()}
+                <span className="text-[10px] text-app-faint w-[28px] text-right">
+                  {folder.itemCount}
+                </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMovingNote({ path: folder.absolutePath, name: folder.name, isFolder: true });
+                  }}
+                  className="p-0.5 text-app-faint hover:text-app-muted cursor-pointer transition-colors"
+                  title="Move folder..."
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                    <polyline points="10 17 15 12 10 7" />
+                    <line x1="15" y1="12" x2="3" y2="12" />
+                  </svg>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeletingNote({ path: folder.absolutePath, name: folder.name });
+                  }}
+                  className="p-0.5 text-app-faint hover:text-red-400 cursor-pointer transition-colors"
+                  title="Delete folder"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 6h18M8 6V4h8v2M10 11v6M14 11v6"/><path d="M5 6h14l-1 14H6z"/>
+                  </svg>
+                </button>
+                <button className="p-0.5 invisible"><svg width="14" height="14" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9" /></svg></button>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      {notes.length === 0 && folders.length === 0 ? (
+        <p className="text-app-faint text-sm text-center py-8">
+          No notes in this folder
         </p>
       ) : (
-        notes.map((note) => {
+        notes.map((note, idx) => {
+          const noteMode = getNoteViewMode(note.relativePath);
+          const noteEditMode = getNoteEditMode(note.relativePath);
           const isExpanded = expandedNotes.has(note.absolutePath);
           const content = loadedContent[note.absolutePath];
+          const isDragging = dragFromIdx === idx;
+          const isDropTarget = dragOverIdx === idx && dragFromIdx !== null && dragFromIdx !== idx;
+          const showContent = noteMode === "always-open" || (noteMode === "accordion" && isExpanded);
+
+          const displayTitle = note.filename;
 
           return (
             <div
-              key={note.absolutePath}
-              className="rounded-lg border border-slate-700/50 overflow-hidden"
+              key={note.relativePath}
+              ref={(el) => { itemEls.current[idx] = el; }}
+              className={`rounded-lg border overflow-hidden ${
+                isDragging ? "opacity-30 border-neutral-700/50"
+                  : isDropTarget ? "border-neutral-400"
+                  : "border-neutral-700/50"
+              }`}
             >
-              <button
-                onClick={() => handleToggle(note.absolutePath)}
-                className="w-full flex items-center justify-between px-3 py-2.5
-                           bg-slate-800/40 hover:bg-slate-800/80 transition-colors
-                           text-left cursor-pointer"
-              >
-                <span className="text-sm font-medium text-slate-200 truncate">
-                  {note.filename}
-                </span>
-                <div className="flex items-center gap-2 shrink-0 ml-2">
-                  <ViewModeSelector
-                    noteRelativePath={note.relativePath}
-                    compact
-                  />
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    className={`text-slate-500 transition-transform duration-200 ${
-                      isExpanded ? "rotate-180" : ""
-                    }`}
+              {isDropTarget && (
+                <div style={{ height: 3, backgroundColor: "var(--accent)", marginTop: -1 }} />
+              )}
+              <div className="flex items-center px-3 py-2.5 bg-neutral-800/40 hover:bg-neutral-800/80 transition-colors">
+                {isManual && (
+                  <div
+                    onPointerDown={(e) => handleGripDown(e, idx)}
+                    className="shrink-0 mr-2 cursor-grab active:cursor-grabbing text-app-faint hover:text-app-muted
+                               touch-none select-none p-1 -ml-1 rounded hover:bg-neutral-700/50"
                   >
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
-                </div>
-              </button>
-              {isExpanded && (
-                <div className="px-3 py-3 bg-slate-900/50 border-t border-slate-700/30">
-                  {content ? (
-                    <NoteContent content={content} />
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <line x1="4" y1="6" x2="20" y2="6"/>
+                      <line x1="4" y1="12" x2="20" y2="12"/>
+                      <line x1="4" y1="18" x2="20" y2="18"/>
+                    </svg>
+                  </div>
+                )}
+
+                {renamingPath === note.absolutePath ? (
+                  <div className="flex-1 min-w-0 mr-2">
+                    <input
+                      autoFocus
+                      value={renameValue}
+                      onChange={(e) => { setRenameValue(e.target.value); setRenameError(""); }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") { e.currentTarget.blur(); submitRename(); }
+                        if (e.key === "Escape") { setRenamingPath(null); setRenameError(""); }
+                      }}
+                      placeholder="Note title..."
+                      className="w-full bg-black/30 border border-neutral-600 rounded px-2 py-0.5
+                                 text-sm text-app focus:outline-none focus:border-neutral-500"
+                    />
+                    {renameError && <p className="text-[10px] text-red-400 mt-0.5">{renameError}</p>}
+                  </div>
+                ) : (
+                <span
+                  onClick={() => handleToggle(note.absolutePath)}
+                  onDoubleClick={(e) => { e.stopPropagation(); setRenamingPath(note.absolutePath); setRenameValue(note.filename); setRenameError(""); }}
+                  className="text-sm font-medium text-app truncate flex-1 min-w-0 cursor-pointer"
+                >
+                  {displayTitle}
+                </span>
+                )}
+
+                <div className="flex items-center gap-1 shrink-0 ml-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const isPinned = vault?.noteOverrides[note.relativePath]?.pinned;
+                      const existing = vault?.noteOverrides[note.relativePath] || {};
+                      const updated = {
+                        ...vault!,
+                        noteOverrides: {
+                          ...vault!.noteOverrides,
+                          [note.relativePath]: { ...existing, pinned: !isPinned },
+                        },
+                      };
+                      setVaults(vaults.map((v) => v.id === vault!.id ? updated : v));
+                      updateVault(updated).catch(console.error);
+                    }}
+                    className={`p-0.5 cursor-pointer transition-colors ${
+                      vault?.noteOverrides[note.relativePath]?.pinned
+                        ? "text-amber-400"
+                        : "text-app-faint hover:text-app-muted"
+                    }`}
+                    title={vault?.noteOverrides[note.relativePath]?.pinned ? "Unpin" : "Pin to top"}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill={vault?.noteOverrides[note.relativePath]?.pinned ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 17v5" /><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16h14v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />
+                    </svg>
+                  </button>
+                  <ViewModeSelector noteRelativePath={note.relativePath} compact />
+                  <EditModeSelector noteRelativePath={note.relativePath} />
+                  <div className="w-[28px]" />
+                  <button
+                    onClick={() => setMovingNote({ path: note.absolutePath, name: note.filename })}
+                    className="p-0.5 cursor-pointer text-app-faint hover:text-app-muted transition-colors"
+                    title="Move to..."
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                      <polyline points="10 17 15 12 10 7" />
+                      <line x1="15" y1="12" x2="3" y2="12" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setDeletingNote({ path: note.absolutePath, name: note.filename })}
+                    className="p-0.5 cursor-pointer text-app-faint hover:text-red-400 transition-colors"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 6h18M8 6V4h8v2M10 11v6M14 11v6"/><path d="M5 6h14l-1 14H6z"/>
+                    </svg>
+                  </button>
+                  {noteMode === "full" ? (
+                    <button
+                      onClick={() => { loadNoteContent(note.absolutePath); openNoteFull(note.absolutePath); }}
+                      className="p-0.5 cursor-pointer"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-app-faint">
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    </button>
+                  ) : noteMode === "always-open" ? (
+                    <button className="p-0.5 shrink-0 invisible"><svg width="14" height="14" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9" /></svg></button>
                   ) : (
-                    <p className="text-slate-500 text-xs">Loading...</p>
+                    <button
+                      onClick={() => handleToggle(note.absolutePath)}
+                      className="p-0.5 cursor-pointer"
+                    >
+                      <svg
+                        width="14" height="14" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2"
+                        className={`text-app-faint transition-transform duration-200 ${
+                          isExpanded ? "rotate-180" : ""
+                        }`}
+                      >
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {showContent && (
+                <div className="px-3 py-3 bg-neutral-900/50 border-t border-neutral-700/30">
+                  {content != null ? (
+                    <NoteContent
+                      content={content}
+                      absolutePath={note.absolutePath}
+                      editMode={noteEditMode}
+                      startInEditMode={justCreatedPath === note.absolutePath}
+                    />
+                  ) : (
+                    <p className="text-app-faint text-xs">Loading...</p>
                   )}
                 </div>
               )}
@@ -74,6 +587,30 @@ export function AccordionView() {
           );
         })
       )}
+      <ConfirmDialog
+        isOpen={deletingNote !== null}
+        message={`Delete "${deletingNote?.name}"?`}
+        onConfirm={async () => {
+          if (deletingNote) {
+            // Check if it's a folder (folders are in the folders list)
+            const isFolder = folders.some((f) => f.absolutePath === deletingNote.path);
+            if (isFolder) {
+              await deleteFolder(deletingNote.path);
+            } else {
+              await deleteNote(deletingNote.path);
+            }
+            refreshNotes();
+          }
+          setDeletingNote(null);
+        }}
+        onCancel={() => setDeletingNote(null)}
+      />
+      <MoveNoteDialog
+        notePath={movingNote?.path || null}
+        noteFilename={movingNote?.name || ""}
+        isFolder={movingNote?.isFolder}
+        onClose={() => { setMovingNote(null); refreshNotes(); }}
+      />
     </div>
   );
 }

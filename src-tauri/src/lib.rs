@@ -1,5 +1,6 @@
 mod commands;
 mod config;
+mod elysium;
 mod models;
 mod watcher;
 
@@ -11,57 +12,24 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
         .setup(|app| {
+            // Hide from dock on macOS
+            #[cfg(target_os = "macos")]
+            {
+                app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+            }
+
             // Manage watcher state
             app.manage(watcher::WatcherState {
                 active_path: Mutex::new(None),
                 debouncer: Mutex::new(None),
+                elysium_debouncer: Mutex::new(None),
             });
-
-            // Set up system tray
-            use tauri::menu::{MenuBuilder, MenuItemBuilder};
-            use tauri::tray::TrayIconBuilder;
-
-            let show_hide = MenuItemBuilder::with_id("show_hide", "Show/Hide")
-                .build(app)?;
-            let quit = MenuItemBuilder::with_id("quit", "Quit")
-                .build(app)?;
-
-            let menu = MenuBuilder::new(app)
-                .item(&show_hide)
-                .separator()
-                .item(&quit)
-                .build()?;
-
-            let _tray = TrayIconBuilder::new()
-                .menu(&menu)
-                .tooltip("Sidewinder")
-                .icon(app.default_window_icon().unwrap().clone())
-                .on_menu_event(move |app, event| {
-                    match event.id().as_ref() {
-                        "show_hide" => {
-                            if let Some(window) = app.get_webview_window("main") {
-                                if window.is_visible().unwrap_or(false) {
-                                    let app_handle = app.clone();
-                                    tauri::async_runtime::spawn(async move {
-                                        let _ = commands::window::slide_window(app_handle, false).await;
-                                    });
-                                } else {
-                                    let _ = window.show();
-                                    let app_handle = app.clone();
-                                    tauri::async_runtime::spawn(async move {
-                                        let _ = commands::window::slide_window(app_handle, true).await;
-                                    });
-                                }
-                            }
-                        }
-                        "quit" => {
-                            app.exit(0);
-                        }
-                        _ => {}
-                    }
-                })
-                .build(app)?;
 
             // Position the window on startup
             let app_handle = app.handle().clone();
@@ -76,6 +44,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::window::slide_window,
             commands::window::position_window,
+            commands::window::reposition_window,
+            commands::window::follow_monitor,
+            commands::window::quit_app,
             commands::vault::load_config_cmd,
             commands::vault::save_config_cmd,
             commands::vault::add_vault,
@@ -86,8 +57,27 @@ pub fn run() {
             commands::notes::list_notes,
             commands::notes::read_note,
             commands::notes::read_notes_batch,
+            commands::notes::save_note,
+            commands::notes::create_note,
+            commands::notes::rename_note,
+            commands::notes::delete_note,
+            commands::notes::list_folder_contents,
+            commands::notes::create_folder,
+            commands::notes::delete_folder,
+            commands::notes::search_notes,
+            commands::notes::move_note,
+            commands::notes::move_folder,
             watcher::watch_vault,
             watcher::unwatch_vault,
+            watcher::watch_elysium,
+            watcher::unwatch_elysium,
+            elysium::load_elysium_items,
+            elysium::load_elysium_notes,
+            elysium::load_all_elysium_notes,
+            elysium::open_in_elysium,
+            elysium::get_elysium_note_folders,
+            elysium::create_elysium_note,
+            elysium::get_elysium_user_profile,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -15,7 +15,8 @@ export function useNotes() {
     const vault = getActiveVault();
     if (!vault) return;
     try {
-      const noteList = await listNotes(vault.path, vault.recursive);
+      // Always list recursively so subfolder navigation works
+      const noteList = await listNotes(vault.path, true);
       setNotes(noteList);
     } catch (e) {
       console.error("Failed to list notes:", e);
