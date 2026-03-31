@@ -103,6 +103,7 @@ export interface WindowConfig {
   paragraphSpacing: number;
   textColor: string;
   monitorMode: "primary" | "follow";
+  vibrancy: boolean;
 }
 
 export interface ElysiumConfig {

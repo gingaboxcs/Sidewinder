@@ -449,6 +449,25 @@ function AppearanceTab({ localConfig, setLocalConfig }: {
         </div>
       </div>
 
+      {/* Vibrancy — available to all */}
+      <div className="flex items-center justify-between">
+        <div>
+          <span className="text-sm text-app">Frosted Glass</span>
+          <p className="text-[10px] text-app-faint mt-0.5">Translucent blur effect on handle and panel</p>
+        </div>
+        <button
+          onClick={() => setLocalConfig({ ...localConfig, vibrancy: !localConfig.vibrancy })}
+          className={`w-9 h-5 rounded-full transition-colors cursor-pointer relative ${
+            localConfig.vibrancy ? "" : "bg-neutral-700"
+          }`}
+          style={localConfig.vibrancy ? { backgroundColor: "var(--accent)" } : undefined}
+        >
+          <div className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-all ${
+            localConfig.vibrancy ? "left-[18px]" : "left-[3px]"
+          }`} />
+        </button>
+      </div>
+
       {!isPro && (
         <div className="p-3 rounded-lg border border-amber-400/20 bg-amber-400/5">
           <p className="text-xs text-app-muted">

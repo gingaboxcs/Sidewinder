@@ -3,10 +3,18 @@ import { TitleBar } from "./TitleBar";
 import { useStore } from "../../stores/store";
 import { quitApp } from "../../lib/tauri";
 
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const isSlid = useStore((s) => s.isSlid);
   const edge = useStore((s) => s.windowConfig.edge);
   const panelColor = useStore((s) => s.windowConfig.panelColor);
+  const vibrancy = useStore((s) => s.windowConfig.vibrancy);
   const view = useStore((s) => s.view);
 
   const isHorizontal = edge === "top" || edge === "bottom";
@@ -18,9 +26,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     bottom: "rounded-t-lg",
   }[edge];
 
+  const panelBg = isSlid
+    ? vibrancy ? hexToRgba(panelColor, 0.92) : panelColor
+    : "transparent";
+
+  const panelStyle: React.CSSProperties = {
+    backgroundColor: panelBg,
+    ...(isSlid && vibrancy ? {
+      backdropFilter: "blur(30px) saturate(180%)",
+      WebkitBackdropFilter: "blur(30px) saturate(180%)",
+    } : {}),
+  };
+
   const panel = (
     <div
-      style={{ backgroundColor: isSlid ? panelColor : "transparent" }}
+      style={panelStyle}
       className={`flex flex-col flex-1 min-w-0 min-h-0 text-app ${isSlid ? roundingClass : ""} overflow-hidden relative`}
     >
       {isSlid && (

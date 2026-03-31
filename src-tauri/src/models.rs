@@ -257,6 +257,9 @@ pub struct WindowConfig {
     /// "primary" = stay on one monitor, "follow" = follow active monitor
     #[serde(default = "default_monitor_mode")]
     pub monitor_mode: String,
+    /// Enable frosted glass effect on handle and panel
+    #[serde(default = "default_true")]
+    pub vibrancy: bool,
 }
 
 fn default_monitor_mode() -> String { "primary".to_string() }
@@ -307,6 +310,7 @@ impl Default for WindowConfig {
             paragraph_spacing: 8,
             text_color: "#ebebeb".to_string(),
             monitor_mode: "primary".to_string(),
+            vibrancy: true,
         }
     }
 }

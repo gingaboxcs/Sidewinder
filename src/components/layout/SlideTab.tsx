@@ -1,6 +1,13 @@
 import { useWindowSlide } from "../../hooks/useWindowSlide";
 import { useStore } from "../../stores/store";
 
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 export function SlideTab() {
   const { toggle, isSlid } = useWindowSlide();
   const edge = useStore((s) => s.windowConfig.edge);
@@ -8,6 +15,7 @@ export function SlideTab() {
   const handleLength = useStore((s) => s.windowConfig.handleLength);
   const alignment = useStore((s) => s.windowConfig.alignment);
   const handleColor = useStore((s) => s.windowConfig.handleColor);
+  const vibrancy = useStore((s) => s.windowConfig.vibrancy);
 
   const isHorizontal = edge === "top" || edge === "bottom";
 
@@ -37,13 +45,6 @@ export function SlideTab() {
     ? alignment === "start" ? "flex-start" : alignment === "end" ? "flex-end" : "center"
     : undefined;
 
-  // Round only the corners on the side away from the screen edge (the inside).
-  // The side touching the panel (or screen edge when collapsed) stays flat.
-  // Handle is on the inside, so the side facing away from the panel gets rounded.
-  // For right edge: handle is on left, panel is on right → round left corners only
-  // For left edge: handle is on right, panel is on left → round right corners only
-  // For top edge: handle is below panel → round bottom corners only
-  // For bottom edge: handle is above panel → round top corners only
   const borderRadius = {
     right: "4px 0 0 4px",
     left: "0 4px 4px 0",
@@ -51,10 +52,25 @@ export function SlideTab() {
     bottom: "4px 4px 0 0",
   }[edge];
 
+  const bgColor = vibrancy ? hexToRgba(handleColor, 0.8) : handleColor;
+
+  const style: React.CSSProperties = {
+    ...size,
+    alignSelf,
+    backgroundColor: bgColor,
+    borderRadius,
+    border: "none",
+    outline: "none",
+    ...(vibrancy ? {
+      backdropFilter: "blur(30px) saturate(180%)",
+      WebkitBackdropFilter: "blur(30px) saturate(180%)",
+    } : {}),
+  };
+
   return (
     <button
       onClick={toggle}
-      style={{ ...size, alignSelf, backgroundColor: handleColor, borderRadius, border: "none", outline: "none" }}
+      style={style}
       className="flex items-center justify-center cursor-pointer appearance-none p-0 m-0"
     >
       <svg

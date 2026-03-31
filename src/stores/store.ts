@@ -26,6 +26,7 @@ const defaultWindowConfig: WindowConfig = {
   paragraphSpacing: 8,
   textColor: "#ebebeb",
   monitorMode: "primary",
+  vibrancy: true,
 };
 
 interface AppState {
