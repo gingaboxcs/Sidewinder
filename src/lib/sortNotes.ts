@@ -35,6 +35,7 @@ export function sortNotes(
   noteOrder: string[],
   descending: boolean = true,
   noteOverrides?: Record<string, NoteOverride>,
+  newlyCreatedPath?: string | null,
 ): NoteMeta[] {
   const sorted = [...notes];
   const dir = descending ? -1 : 1;
@@ -60,19 +61,18 @@ export function sortNotes(
     }
   }
 
-  // Pinned notes always go to the top, preserving their relative sort order
-  if (noteOverrides) {
-    const pinned: NoteMeta[] = [];
-    const unpinned: NoteMeta[] = [];
-    for (const note of sorted) {
-      if (noteOverrides[note.relativePath]?.pinned) {
-        pinned.push(note);
-      } else {
-        unpinned.push(note);
-      }
+  // Newly created note and pinned notes always go to the top
+  const newlyCreated: NoteMeta[] = [];
+  const pinned: NoteMeta[] = [];
+  const rest: NoteMeta[] = [];
+  for (const note of sorted) {
+    if (newlyCreatedPath && note.absolutePath === newlyCreatedPath) {
+      newlyCreated.push(note);
+    } else if (noteOverrides?.[note.relativePath]?.pinned) {
+      pinned.push(note);
+    } else {
+      rest.push(note);
     }
-    return [...pinned, ...unpinned];
   }
-
-  return sorted;
+  return [...newlyCreated, ...pinned, ...rest];
 }

@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useStore } from "../../stores/store";
 import { useSortedNotes } from "../../hooks/useSortedNotes";
-import { updateVault, deleteNote, deleteFolder, readNotesBatch, renameNote, listFolderContents } from "../../lib/tauri";
+import { updateVault, deleteNote, deleteFolder, readNotesBatch, renameNote, createNote, saveNote, listFolderContents } from "../../lib/tauri";
 import { NoteContent } from "./NoteContent";
 import { ViewModeSelector } from "../common/ViewModeSelector";
 import { EditModeSelector } from "../common/EditModeSelector";
@@ -62,7 +62,7 @@ export function AccordionView() {
   }, [activePath, allNotes, effectiveSortMode, effectiveSortDescending]);
 
   // Filter notes to only show ones in the current folder (not subfolders)
-  const notes = allNotes.filter((n) => {
+  const filteredNotes = allNotes.filter((n) => {
     const noteDir = n.absolutePath.substring(0, n.absolutePath.lastIndexOf("/"));
     return noteDir === activePath;
   });
@@ -81,8 +81,8 @@ export function AccordionView() {
 
   // Load content for always-open notes only (not all notes — that causes loops)
   useEffect(() => {
-    if (!notes.length || !vault) return;
-    const alwaysOpenPaths = notes
+    if (!filteredNotes.length || !vault) return;
+    const alwaysOpenPaths = filteredNotes
       .filter((n) => getNoteViewMode(n.relativePath) === "always-open" && loadedContent[n.absolutePath] == null)
       .map((n) => n.absolutePath);
     if (!alwaysOpenPaths.length) return;
@@ -92,7 +92,7 @@ export function AccordionView() {
       }
     }).catch(console.error);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notes]);
+  }, [filteredNotes]);
 
   // Folder drag state
   const [folderDragFrom, setFolderDragFrom] = useState<number | null>(null);
@@ -125,29 +125,63 @@ export function AccordionView() {
       await updateVault(updated);
     } catch (e) { console.error(e); }
   };
-  const [justCreatedPath, setJustCreatedPath] = useState<string | null>(null);
   const [renamingPath, setRenamingPath] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [renameError, setRenameError] = useState("");
 
-  // Auto-expand newly created notes and flag them for edit mode
-  const newlyCreatedNotePath = useStore((s) => s.newlyCreatedNotePath);
-  const setNewlyCreatedNotePath = useStore((s) => s.setNewlyCreatedNotePath);
+  const notes = filteredNotes;
+
+  // Inline note creation state
+  const creatingNote = useStore((s) => s.creatingNote);
+  const setCreatingNote = useStore((s) => s.setCreatingNote);
+  const [newNoteTitle, setNewNoteTitle] = useState("");
+  const [newNoteContent, setNewNoteContent] = useState("");
+  const [newNoteError, setNewNoteError] = useState("");
+  const newNoteTitleRef = useRef<HTMLInputElement>(null);
+
+  // Focus title input when creation form appears
   useEffect(() => {
-    if (newlyCreatedNotePath) {
-      const note = notes.find((n) => n.absolutePath === newlyCreatedNotePath);
-      if (note) {
-        if (!expandedNotes.has(note.absolutePath)) {
-          toggleNote(note.absolutePath);
-        }
-        setJustCreatedPath(note.absolutePath);
-        // Auto-start rename with empty value so user types the title
-        setRenamingPath(note.absolutePath);
-        setRenameValue("");
-        setNewlyCreatedNotePath(null);
-      }
+    if (creatingNote) {
+      setNewNoteTitle("");
+      setNewNoteContent("");
+      setNewNoteError("");
+      requestAnimationFrame(() => newNoteTitleRef.current?.focus());
     }
-  }, [newlyCreatedNotePath, notes, setNewlyCreatedNotePath, expandedNotes, toggleNote]);
+  }, [creatingNote]);
+
+  const handleCreateNoteDone = async () => {
+    const title = newNoteTitle.trim() || t("untitled");
+    try {
+      let name = title;
+      let counter = 1;
+      let fullPath: string | null = null;
+      while (!fullPath) {
+        try {
+          fullPath = await createNote(activePath, name);
+        } catch {
+          counter++;
+          name = `${title} ${counter}`;
+        }
+      }
+      if (newNoteContent.trim()) {
+        await saveNote(fullPath, newNoteContent);
+      }
+      setCreatingNote(false);
+      await refreshNotes();
+      // Expand the new note
+      toggleNote(fullPath);
+      setNoteContent(fullPath, newNoteContent);
+    } catch (e: any) {
+      setNewNoteError(e?.toString() || "Failed to create note");
+    }
+  };
+
+  const handleCreateNoteCancel = () => {
+    setCreatingNote(false);
+    setNewNoteTitle("");
+    setNewNoteContent("");
+    setNewNoteError("");
+  };
 
   const handleToggle = async (absolutePath: string) => {
     toggleNote(absolutePath);
@@ -280,18 +314,13 @@ export function AccordionView() {
     }
     setRenameError("");
     try {
-      const wasJustCreated = justCreatedPath === renamingPath;
       const newPath = await renameNote(renamingPath, renameValue.trim());
       setRenamingPath(null);
       await refreshNotes();
-      // Re-expand the renamed note and keep it in edit mode
       if (newPath) {
         const expanded = useStore.getState().expandedNotes;
         if (!expanded.has(newPath)) {
           toggleNote(newPath);
-        }
-        if (wasJustCreated) {
-          setJustCreatedPath(newPath);
         }
       }
     } catch (e: any) {
@@ -301,6 +330,54 @@ export function AccordionView() {
 
   return (
     <div className="p-3 space-y-1">
+      {/* Inline note creation form */}
+      {creatingNote && (
+        <div className="rounded-lg border border-neutral-700/50 overflow-hidden mb-1">
+          <div className="px-3 py-2.5 bg-neutral-800/70">
+            <input
+              ref={newNoteTitleRef}
+              value={newNoteTitle}
+              onChange={(e) => { setNewNoteTitle(e.target.value); setNewNoteError(""); }}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") handleCreateNoteCancel();
+              }}
+              placeholder={t("noteTitle")}
+              className="w-full bg-black/30 border border-neutral-600 rounded px-2 py-0.5
+                         text-sm text-app focus:outline-none focus:border-neutral-500"
+            />
+          </div>
+          <div className="px-3 py-3 bg-neutral-900/50 border-t border-neutral-700/30">
+            <textarea
+              value={newNoteContent}
+              onChange={(e) => setNewNoteContent(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") handleCreateNoteCancel();
+              }}
+              placeholder={t("notes") + "..."}
+              className="w-full bg-black/20 border border-neutral-700 rounded px-3 py-2
+                         text-app focus:outline-none focus:border-neutral-500 resize-none text-sm leading-relaxed min-h-[80px]"
+              rows={4}
+            />
+            {newNoteError && <p className="text-[10px] text-red-400 mt-1">{newNoteError}</p>}
+            <div className="flex justify-end gap-2 mt-2">
+              <button
+                onClick={handleCreateNoteCancel}
+                className="text-xs px-3 py-1.5 rounded bg-neutral-700 text-app-muted hover:bg-neutral-600 hover:text-app cursor-pointer transition-colors"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                onClick={handleCreateNoteDone}
+                style={{ backgroundColor: "var(--accent)" }}
+                className="text-xs px-3 py-1.5 rounded text-white cursor-pointer"
+              >
+                {t("done")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Subfolders */}
       {folders.map((folder, fIdx) => {
         const isFolderDragging = folderDragFrom === fIdx;
@@ -472,9 +549,10 @@ export function AccordionView() {
                       value={renameValue}
                       onChange={(e) => { setRenameValue(e.target.value); setRenameError(""); }}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") { e.currentTarget.blur(); submitRename(); }
+                        if (e.key === "Enter") { e.preventDefault(); submitRename(); }
                         if (e.key === "Escape") { setRenamingPath(null); setRenameError(""); }
                       }}
+                      onBlur={() => submitRename()}
                       placeholder={t("noteTitle")}
                       className="w-full bg-black/30 border border-neutral-600 rounded px-2 py-0.5
                                  text-sm text-app focus:outline-none focus:border-neutral-500"
@@ -577,7 +655,7 @@ export function AccordionView() {
                       content={content}
                       absolutePath={note.absolutePath}
                       editMode={noteEditMode}
-                      startInEditMode={justCreatedPath === note.absolutePath}
+                      startInEditMode={false}
                     />
                   ) : (
                     <p className="text-app-faint text-xs">{t("loading")}</p>

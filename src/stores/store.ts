@@ -40,6 +40,7 @@ interface AppState {
   expandedNotes: Set<string>;
   activeNoteId: string | null;
   newlyCreatedNotePath: string | null;
+  creatingNote: boolean;
   currentFolderPath: string | null;
 
   // UI state
@@ -70,6 +71,7 @@ interface AppState {
   setNoteContent: (path: string, content: string) => void;
   toggleNote: (path: string) => void;
   setNewlyCreatedNotePath: (path: string | null) => void;
+  setCreatingNote: (creating: boolean) => void;
   setCurrentFolderPath: (path: string | null) => void;
   openNoteFull: (path: string) => void;
   goBack: () => void;
@@ -91,6 +93,7 @@ export const useStore = create<AppState>((set, get) => ({
   expandedNotes: new Set(),
   activeNoteId: null,
   newlyCreatedNotePath: null,
+  creatingNote: false,
   currentFolderPath: null,
   view: "vault-list",
   isSlid: false,
@@ -155,6 +158,7 @@ export const useStore = create<AppState>((set, get) => ({
     }),
 
   setNewlyCreatedNotePath: (path) => set({ newlyCreatedNotePath: path }),
+  setCreatingNote: (creating) => set({ creatingNote: creating }),
   setCurrentFolderPath: (path) => set({ currentFolderPath: path }),
 
   openNoteFull: (path) =>

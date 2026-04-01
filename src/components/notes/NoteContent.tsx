@@ -107,15 +107,9 @@ function MarkdownEditor({ content, absolutePath, startInEditMode }: { content: s
   if (isEditing) {
     return (
       <div>
-        <div className="flex items-center justify-between mb-2 sticky top-0 z-10 py-1" style={{ backgroundColor: "inherit" }}>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-700/40 text-app-faint">{t("markdown")}</span>
-            <SaveIndicator status={saveStatus} />
-          </div>
-          <button
-            onClick={() => { saveNow(editContent); setIsEditing(false); }}
-            className="text-[10px] text-app-faint hover:text-app cursor-pointer px-1.5 py-0.5"
-          >{t("done")}</button>
+        <div className="flex items-center gap-2 mb-2 sticky top-0 z-10 py-1" style={{ backgroundColor: "inherit" }}>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-700/40 text-app-faint">{t("markdown")}</span>
+          <SaveIndicator status={saveStatus} />
         </div>
         <textarea
           ref={textareaRef}
@@ -127,6 +121,13 @@ function MarkdownEditor({ content, absolutePath, startInEditMode }: { content: s
                      text-app focus:outline-none focus:border-neutral-500 resize-none text-sm leading-relaxed"
           spellCheck
         />
+        <div className="flex justify-end mt-2">
+          <button
+            onClick={() => { saveNow(editContent); setIsEditing(false); }}
+            style={{ backgroundColor: "var(--accent)" }}
+            className="text-xs px-3 py-1.5 rounded text-white cursor-pointer"
+          >{t("done")}</button>
+        </div>
       </div>
     );
   }
@@ -201,15 +202,9 @@ function CodeEditor({ content, absolutePath, startInEditMode }: { content: strin
   if (isEditing) {
     return (
       <div>
-        <div className="flex items-center justify-between mb-2 sticky top-0 z-10 py-1" style={{ backgroundColor: "inherit" }}>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-700/40 text-app-faint">{t("code")}</span>
-            <SaveIndicator status={saveStatus} />
-          </div>
-          <button
-            onClick={() => { saveNow(editContent); setIsEditing(false); }}
-            className="text-[10px] text-app-faint hover:text-app cursor-pointer px-1.5 py-0.5"
-          >{t("done")}</button>
+        <div className="flex items-center gap-2 mb-2 sticky top-0 z-10 py-1" style={{ backgroundColor: "inherit" }}>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-700/40 text-app-faint">{t("code")}</span>
+          <SaveIndicator status={saveStatus} />
         </div>
         {/* Overlay approach: highlighted HTML behind, transparent textarea on top */}
         <div className="relative">
@@ -230,6 +225,13 @@ function CodeEditor({ content, absolutePath, startInEditMode }: { content: strin
                        font-mono text-xs leading-5 whitespace-pre-wrap break-words"
             spellCheck={false}
           />
+        </div>
+        <div className="flex justify-end mt-2">
+          <button
+            onClick={() => { saveNow(editContent); setIsEditing(false); }}
+            style={{ backgroundColor: "var(--accent)" }}
+            className="text-xs px-3 py-1.5 rounded text-white cursor-pointer"
+          >{t("done")}</button>
         </div>
       </div>
     );
@@ -364,12 +366,9 @@ function PlainTextEditor({ content, absolutePath, startInEditMode }: { content: 
   return (
     <div>
       <div className="sticky top-0 z-10 py-1 mb-2" style={{ backgroundColor: "inherit" }}>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-700/40 text-app-faint">{t("richText")}</span>
-          <button
-            onClick={() => { saveNow(getContent()); setIsEditing(false); }}
-            className="text-[10px] text-app-faint hover:text-app cursor-pointer px-1.5 py-0.5"
-          >{t("done")}</button>
+          <SaveIndicator status={saveStatus} />
         </div>
         <div className="mt-1.5 px-1 py-1 bg-neutral-800/80 rounded border border-neutral-700/50">
           {toolbar}
@@ -386,6 +385,13 @@ function PlainTextEditor({ content, absolutePath, startInEditMode }: { content: 
                    text-sm leading-relaxed plaintext-content"
         suppressContentEditableWarning
       />
+      <div className="flex justify-end mt-2">
+        <button
+          onClick={() => { saveNow(getContent()); setIsEditing(false); }}
+          style={{ backgroundColor: "var(--accent)" }}
+          className="text-xs px-3 py-1.5 rounded text-white cursor-pointer"
+        >{t("done")}</button>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useStore } from "../../stores/store";
-import { createNote, createFolder, updateVault, loadConfig } from "../../lib/tauri";
+import { createFolder, updateVault, loadConfig } from "../../lib/tauri";
 import { useNotes } from "../../hooks/useNotes";
 import { t } from "../../lib/i18n";
 import type { SortMode } from "../../types";
@@ -16,7 +16,7 @@ function getSortLabels(): Record<SortMode, string> {
 export function NoteListHeader() {
   const getActiveVault = useStore((s) => s.getActiveVault);
   const setVaults = useStore((s) => s.setVaults);
-  const setNewlyCreatedNotePath = useStore((s) => s.setNewlyCreatedNotePath);
+  const setCreatingNote = useStore((s) => s.setCreatingNote);
   const currentFolderPath = useStore((s) => s.currentFolderPath);
   const { refreshNotes } = useNotes();
 
@@ -37,26 +37,9 @@ export function NoteListHeader() {
   const effectiveSortMode = folderOverride?.sortMode || vault.sortMode;
   const effectiveSortDescending = folderOverride?.sortDescending ?? (vault.sortDescending ?? true);
 
-  const handleQuickCreate = useCallback(async () => {
-    try {
-      let name = t("untitled");
-      let counter = 1;
-      let created = false;
-      while (!created) {
-        try {
-          const fullPath = await createNote(activePath, name);
-          await refreshNotes();
-          setNewlyCreatedNotePath(fullPath);
-          created = true;
-        } catch {
-          counter++;
-          name = `${t("untitled")} ${counter}`;
-        }
-      }
-    } catch (e) {
-      console.error("Failed to create note:", e);
-    }
-  }, [activePath, refreshNotes, setNewlyCreatedNotePath]);
+  const handleQuickCreate = useCallback(() => {
+    setCreatingNote(true);
+  }, [setCreatingNote]);
 
   // Listen for keyboard shortcut events
   useEffect(() => {

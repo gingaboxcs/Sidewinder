@@ -132,11 +132,16 @@ fn get_usable_screen(window: &tauri::WebviewWindow, follow_active: bool) -> Resu
     }
 }
 
-/// The window is always full size (handle + panel). This computes that fixed size
-/// and two positions: "hidden" (panel off-screen, handle visible) and "shown" (everything on-screen).
+/// Geometry for the window at hidden and shown states.
+/// For left/right edges: window is full size, position changes.
+/// For top/bottom edges: window resizes between handle-only and full size (macOS clamps vertical position).
 struct Geometry {
+    /// Full window size (handle + panel)
     w: f64,
     h: f64,
+    /// Handle-only size (for top/bottom resize approach)
+    hidden_w: f64,
+    hidden_h: f64,
     hidden_x: f64,
     hidden_y: f64,
     shown_x: f64,
@@ -166,25 +171,30 @@ fn compute_geometry(cfg: &WindowConfig, area: &ScreenArea) -> Geometry {
                 _ => unreachable!(),
             };
 
-            Geometry { w, h, hidden_x, hidden_y: align_y, shown_x, shown_y: align_y }
+            Geometry { w, h, hidden_w: w, hidden_h: h, hidden_x, hidden_y: align_y, shown_x, shown_y: align_y }
         }
         Edge::Top | Edge::Bottom => {
             let w = panel_w.max(length);
             let h = thickness + panel_h;
 
-            let align_x = area.x + match cfg.alignment {
-                Alignment::Start => 0.0,
-                Alignment::Center => (area.w - w) / 2.0,
-                Alignment::End => area.w - w,
+            // Use the same center point for both hidden and shown states
+            // so the window expands/contracts symmetrically
+            let center_x = area.x + match cfg.alignment {
+                Alignment::Start => w / 2.0,
+                Alignment::Center => area.w / 2.0,
+                Alignment::End => area.w - w / 2.0,
             };
 
-            let (hidden_y, shown_y) = match cfg.edge {
-                Edge::Top => (area.y - panel_h, area.y),
-                Edge::Bottom => (area.y + area.h - thickness, area.y + area.h - h),
+            let shown_x = center_x - w / 2.0;
+            let hidden_x = center_x - length / 2.0;
+
+            let (hidden_y, shown_y, hidden_w, hidden_h) = match cfg.edge {
+                Edge::Top => (area.y, area.y, length, thickness),
+                Edge::Bottom => (area.y + area.h - thickness, area.y + area.h - h, length, thickness),
                 _ => unreachable!(),
             };
 
-            Geometry { w, h, hidden_x: align_x, hidden_y, shown_x: align_x, shown_y }
+            Geometry { w, h, hidden_w, hidden_h, hidden_x, hidden_y, shown_x, shown_y }
         }
     }
 }
@@ -203,10 +213,22 @@ pub async fn slide_window(app: AppHandle, visible: bool) -> Result<(), String> {
     let delay = cfg.animation_delay as u64;
     let duration = cfg.animation_duration as u64;
 
+    let needs_resize = matches!(cfg.edge, Edge::Top | Edge::Bottom);
+
     let (start_x, start_y, end_x, end_y) = if visible {
         (geo.hidden_x, geo.hidden_y, geo.shown_x, geo.shown_y)
     } else {
         (geo.shown_x, geo.shown_y, geo.hidden_x, geo.hidden_y)
+    };
+
+    let (start_w, start_h, end_w, end_h) = if needs_resize {
+        if visible {
+            (geo.hidden_w, geo.hidden_h, geo.w, geo.h)
+        } else {
+            (geo.w, geo.h, geo.hidden_w, geo.hidden_h)
+        }
+    } else {
+        (geo.w, geo.h, geo.w, geo.h)
     };
 
     // When opening: emit state before animation so content is visible during slide
@@ -220,6 +242,9 @@ pub async fn slide_window(app: AppHandle, visible: bool) -> Result<(), String> {
     }
 
     if duration == 0 {
+        if needs_resize {
+            window.set_size(tauri::LogicalSize::new(end_w, end_h)).map_err(|e| e.to_string())?;
+        }
         window.set_position(tauri::LogicalPosition::new(end_x, end_y)).map_err(|e| e.to_string())?;
     } else {
         let steps = (duration / 16).max(1) as usize;
@@ -232,11 +257,19 @@ pub async fn slide_window(app: AppHandle, visible: bool) -> Result<(), String> {
             let x = start_x + (end_x - start_x) * eased;
             let y = start_y + (end_y - start_y) * eased;
 
+            if needs_resize {
+                let w = start_w + (end_w - start_w) * eased;
+                let h = start_h + (end_h - start_h) * eased;
+                window.set_size(tauri::LogicalSize::new(w, h)).map_err(|e| e.to_string())?;
+            }
             window.set_position(tauri::LogicalPosition::new(x, y)).map_err(|e| e.to_string())?;
             tokio::time::sleep(std::time::Duration::from_millis(step_ms as u64)).await;
         }
 
-        // Ensure exact final position
+        // Ensure exact final state
+        if needs_resize {
+            window.set_size(tauri::LogicalSize::new(end_w, end_h)).map_err(|e| e.to_string())?;
+        }
         window.set_position(tauri::LogicalPosition::new(end_x, end_y)).map_err(|e| e.to_string())?;
     }
 
@@ -259,8 +292,8 @@ pub async fn position_window(app: AppHandle) -> Result<(), String> {
     let area = get_usable_screen(&window, follow)?;
     let geo = compute_geometry(&cfg, &area);
 
-    // Set full size and position at hidden (panel off-screen)
-    window.set_size(tauri::LogicalSize::new(geo.w, geo.h)).map_err(|e| e.to_string())?;
+    // Set size and position at hidden state
+    window.set_size(tauri::LogicalSize::new(geo.hidden_w, geo.hidden_h)).map_err(|e| e.to_string())?;
     window.set_position(tauri::LogicalPosition::new(geo.hidden_x, geo.hidden_y)).map_err(|e| e.to_string())?;
     window.show().map_err(|e| e.to_string())?;
 
@@ -283,7 +316,7 @@ pub async fn follow_monitor(app: AppHandle) -> Result<(), String> {
     let geo = compute_geometry(&cfg, &area);
 
     // Reposition to the active monitor's hidden position
-    window.set_size(tauri::LogicalSize::new(geo.w, geo.h)).map_err(|e| e.to_string())?;
+    window.set_size(tauri::LogicalSize::new(geo.hidden_w, geo.hidden_h)).map_err(|e| e.to_string())?;
     window.set_position(tauri::LogicalPosition::new(geo.hidden_x, geo.hidden_y)).map_err(|e| e.to_string())?;
 
     Ok(())
@@ -303,7 +336,7 @@ pub async fn reposition_window(app: AppHandle) -> Result<(), String> {
     let area = get_usable_screen(&window, follow)?;
     let geo = compute_geometry(&cfg, &area);
 
-    window.set_size(tauri::LogicalSize::new(geo.w, geo.h)).map_err(|e| e.to_string())?;
+    window.set_size(tauri::LogicalSize::new(geo.hidden_w, geo.hidden_h)).map_err(|e| e.to_string())?;
     window.set_position(tauri::LogicalPosition::new(geo.hidden_x, geo.hidden_y)).map_err(|e| e.to_string())?;
 
     Ok(())
