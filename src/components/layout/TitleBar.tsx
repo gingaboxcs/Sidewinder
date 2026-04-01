@@ -82,7 +82,7 @@ export function TitleBar() {
           <button
             onClick={() => setView("search")}
             className="text-app-faint hover:text-app transition-colors p-1 cursor-pointer"
-            title="Search"
+            title={t("search")}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -93,7 +93,7 @@ export function TitleBar() {
             <button
               onClick={() => setView("calendar")}
               className="text-app-faint hover:text-app transition-colors p-1 cursor-pointer"
-              title="Calendar"
+              title={t("calendar")}
             >
               <svg
                 width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -109,7 +109,7 @@ export function TitleBar() {
           <button
             onClick={() => setView("settings")}
             className="text-app-faint hover:text-app transition-colors p-1 cursor-pointer"
-            title="Settings"
+            title={t("settings")}
           >
             <svg
               width="16" height="16" viewBox="0 0 24 24" fill="none"

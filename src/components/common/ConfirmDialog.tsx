@@ -1,3 +1,5 @@
+import { t } from "../../lib/i18n";
+
 interface Props {
   message: string;
   isOpen: boolean;
@@ -17,13 +19,13 @@ export function ConfirmDialog({ message, isOpen, onConfirm, onCancel }: Props) {
             onClick={onCancel}
             className="px-3 py-1.5 text-sm text-app-muted hover:text-app transition-colors cursor-pointer"
           >
-            Cancel
+            {t("cancel")}
           </button>
           <button
             onClick={onConfirm}
             className="px-4 py-1.5 rounded text-sm text-white cursor-pointer bg-red-600 hover:bg-red-500 transition-colors"
           >
-            Delete
+            {t("delete_")}
           </button>
         </div>
       </div>

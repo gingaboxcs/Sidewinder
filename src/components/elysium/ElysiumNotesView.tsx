@@ -5,6 +5,7 @@ import { loadElysiumNotes, createElysiumNote, getElysiumUserProfile } from "../.
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
+import { t } from "../../lib/i18n";
 import type { ElysiumNote, ElysiumUserProfile } from "../../types";
 
 export function ElysiumNotesView() {
@@ -38,7 +39,7 @@ export function ElysiumNotesView() {
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto p-3 space-y-4">
         {notes.length === 0 ? (
-          <p className="text-app-faint text-sm text-center py-8">No notes yet</p>
+          <p className="text-app-faint text-sm text-center py-8">{t("noNotesYet")}</p>
         ) : (
           notes.map((note) => (
             <NoteCard key={note.id} note={note} />
@@ -123,7 +124,7 @@ function ComposeBar({ goalName, opentimePath, userProfile, onSent }: {
               handleSend();
             }
           }}
-          placeholder="Write a note..."
+          placeholder={t("writeNote")}
           rows={1}
           className="flex-1 bg-black/20 border border-neutral-700 rounded-lg px-3 py-2
                      text-sm text-app focus:outline-none focus:border-neutral-500 resize-none"
@@ -138,7 +139,7 @@ function ComposeBar({ goalName, opentimePath, userProfile, onSent }: {
               : "bg-neutral-800 text-app-faint cursor-not-allowed"
           }`}
         >
-          {sending ? "..." : "Send"}
+          {sending ? "..." : t("send")}
         </button>
       </div>
       <p className="text-[10px] text-app-faint mt-1">Enter to send, Shift+Enter for new line</p>

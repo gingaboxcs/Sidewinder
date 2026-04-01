@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useStore } from "../../stores/store";
 import { searchNotesWithQuery } from "../../lib/tauri";
+import { t } from "../../lib/i18n";
 import type { SearchResult } from "../../types";
 
 export function SearchView() {
@@ -74,7 +75,7 @@ export function SearchView() {
                 setView("vault-list");
               }
             }}
-            placeholder="Search notes..."
+            placeholder={t("searchNotes")}
             className="w-full bg-black/20 border border-neutral-700 rounded-lg pl-10 pr-3 py-2
                        text-sm text-app focus:outline-none focus:border-neutral-500"
           />
@@ -84,16 +85,16 @@ export function SearchView() {
       {/* Results */}
       <div className="flex-1 overflow-y-auto px-3 pb-3">
         {searching && (
-          <p className="text-app-faint text-xs text-center py-4">Searching...</p>
+          <p className="text-app-faint text-xs text-center py-4">{t("searching")}</p>
         )}
 
         {!searching && query.trim() && results.length === 0 && (
-          <p className="text-app-faint text-xs text-center py-4">No results found</p>
+          <p className="text-app-faint text-xs text-center py-4">{t("noResults")}</p>
         )}
 
         {!query.trim() && (
           <p className="text-app-faint text-xs text-center py-8">
-            Search across all your vaults and notes
+            {t("searchAcross")}
           </p>
         )}
 
@@ -103,7 +104,7 @@ export function SearchView() {
               <button
                 key={`${result.note.absolutePath}-${i}`}
                 onClick={() => openResult(result)}
-                className="w-full text-left px-3 py-2 rounded-lg bg-neutral-800/40 hover:bg-neutral-800/80
+                className="w-full text-left px-3 py-2 rounded-lg bg-neutral-800/70 hover:bg-neutral-800/90
                            border border-neutral-700/50 transition-colors cursor-pointer"
               >
                 <div className="flex items-center justify-between">

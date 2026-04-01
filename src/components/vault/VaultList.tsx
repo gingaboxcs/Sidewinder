@@ -13,11 +13,11 @@ import { UpgradePrompt } from "../common/UpgradePrompt";
 import { t } from "../../lib/i18n";
 import type { ElysiumNoteFolder, SortMode, Vault } from "../../types";
 
-const sortLabels: Record<SortMode, string> = {
-  alphabetical: "A-Z",
-  modified: "Recent",
-  manual: "Manual",
-};
+const sortLabels = (): Record<SortMode, string> => ({
+  alphabetical: t("alphabetical"),
+  modified: t("recent"),
+  manual: t("manual"),
+});
 
 export function VaultList() {
   const { vaults, addVault, removeVault, updateVault } = useVaults();
@@ -185,9 +185,9 @@ export function VaultList() {
             onClick={cycleSortMode}
             className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-800 text-app-faint
                        hover:text-app hover:bg-neutral-700 transition-colors cursor-pointer"
-            title={`Sort: ${sortLabels[vaultSortMode]} (click to cycle)`}
+            title={`${t("sort")}: ${sortLabels()[vaultSortMode]} (${t("clickToCycle")})`}
           >
-            {sortLabels[vaultSortMode]}
+            {sortLabels()[vaultSortMode]}
           </button>
           {vaultSortMode !== "manual" && (
             <button
@@ -201,7 +201,7 @@ export function VaultList() {
                 } catch (e) { console.error(e); }
               }}
               className="text-app-faint hover:text-app cursor-pointer p-0.5 transition-colors"
-              title={vaultSortDescending ? "Newest first" : "Oldest first"}
+              title={vaultSortDescending ? t("newestFirst") : t("oldestFirst")}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                    className={`transition-transform ${vaultSortDescending ? "" : "rotate-180"}`}>
@@ -219,26 +219,26 @@ export function VaultList() {
                        border border-neutral-700 hover:border-neutral-600
                        rounded text-app transition-colors cursor-pointer"
           >
-            + Add
+            {t("addVault")}
           </button>
         )}
       </div>
 
       {!isPro && regularVaultCount > 0 && (
         <p className="text-[10px] text-app-faint mb-3">
-          {regularVaultCount}/{FREE_VAULT_LIMIT} vaults used
+          {regularVaultCount}/{FREE_VAULT_LIMIT} {t("vaults")}
         </p>
       )}
 
       {sortedVaults.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-app-faint text-sm mb-3">No vaults yet</p>
+          <p className="text-app-faint text-sm mb-3">{t("noVaultsYet")}</p>
           <button
             onClick={() => setShowAdd(true)}
             style={{ color: "var(--accent)" }}
             className="text-sm transition-colors cursor-pointer"
           >
-            Add your first vault
+            {t("addFirstVault")}
           </button>
         </div>
       ) : (
@@ -381,14 +381,14 @@ function ElysiumVaults() {
     <div className="mt-6">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold text-app-muted uppercase tracking-wider">
-          Elysium Notes
+          {t("elysiumNotes")}
         </h2>
         <button
           onClick={() => openInElysium("", "")}
           className="text-[10px] text-app-faint hover:text-app cursor-pointer"
-          title="Open Elysium"
+          title={t("openElysium")}
         >
-          Open App
+          {t("openApp")}
         </button>
       </div>
       <div className="space-y-2">
@@ -404,7 +404,7 @@ function ElysiumFolderCard({ folder, onClick }: { folder: ElysiumNoteFolder; onC
   return (
     <div
       onClick={onClick}
-      className="group p-3 rounded-lg bg-neutral-800/60 hover:bg-neutral-800
+      className="group p-3 rounded-lg bg-neutral-800/80 hover:bg-neutral-800
                  border border-neutral-700/50 hover:border-neutral-600/50
                  cursor-pointer transition-all duration-200"
     >
@@ -414,7 +414,7 @@ function ElysiumFolderCard({ folder, onClick }: { folder: ElysiumNoteFolder; onC
           {folder.name}
         </h3>
         <span className="text-[10px] text-app-faint">
-          {folder.noteCount} note{folder.noteCount !== 1 ? "s" : ""}
+          {folder.noteCount} {t("notes")}
         </span>
       </div>
     </div>

@@ -8,6 +8,7 @@ import { EditModeSelector } from "../common/EditModeSelector";
 import { ConfirmDialog } from "../common/ConfirmDialog";
 import { MoveNoteDialog } from "./MoveNoteDialog";
 import type { EditMode, FolderEntry, ViewMode } from "../../types";
+import { t } from "../../lib/i18n";
 
 export function AccordionView() {
   const { notes: allNotes, loadNoteContent, sortMode, refreshNotes } = useSortedNotes();
@@ -320,7 +321,7 @@ export function AccordionView() {
             )}
             <div
               onClick={() => setCurrentFolderPath(folder.absolutePath)}
-              className="flex items-center px-3 py-2.5 bg-neutral-800/40 hover:bg-neutral-800/80 cursor-pointer transition-colors"
+              className="flex items-center px-3 py-2.5 bg-neutral-800/70 hover:bg-neutral-800/90 cursor-pointer transition-colors"
             >
               {isManual && (
                 <div
@@ -363,7 +364,7 @@ export function AccordionView() {
                       className={`text-[10px] px-1.5 py-0.5 rounded transition-colors cursor-pointer ${
                         hasViewOverride ? "" : "bg-neutral-700/40 text-app-faint hover:text-app-muted"
                       }`}
-                      title={`View: ${fView}${hasViewOverride ? " (override)" : ""}`}
+                      title={`${t("view")}: ${fView}${hasViewOverride ? ` (${t("override")})` : ""}`}
                     >
                       {fView === "accordion" ? "A" : fView === "full" ? "F" : "O"}
                     </button>
@@ -377,7 +378,7 @@ export function AccordionView() {
                       className={`text-[10px] px-1.5 py-0.5 rounded transition-colors cursor-pointer ${
                         hasEditOverride ? "" : "bg-neutral-700/40 text-app-faint hover:text-app-muted"
                       }`}
-                      title={`Edit: ${fEdit}${hasEditOverride ? " (override)" : ""}`}
+                      title={`${t("edit")}: ${fEdit}${hasEditOverride ? ` (${t("override")})` : ""}`}
                     >
                       {fEdit === "markdown" ? "MD" : fEdit === "code" ? "</>" : "Txt"}
                     </button>
@@ -393,7 +394,7 @@ export function AccordionView() {
                     setMovingNote({ path: folder.absolutePath, name: folder.name, isFolder: true });
                   }}
                   className="p-0.5 text-app-faint hover:text-app-muted cursor-pointer transition-colors"
-                  title="Move folder..."
+                  title={t("moveFolder")}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
@@ -407,7 +408,7 @@ export function AccordionView() {
                     setDeletingNote({ path: folder.absolutePath, name: folder.name });
                   }}
                   className="p-0.5 text-app-faint hover:text-red-400 cursor-pointer transition-colors"
-                  title="Delete folder"
+                  title={t("deleteFolder")}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M3 6h18M8 6V4h8v2M10 11v6M14 11v6"/><path d="M5 6h14l-1 14H6z"/>
@@ -422,7 +423,7 @@ export function AccordionView() {
 
       {notes.length === 0 && folders.length === 0 ? (
         <p className="text-app-faint text-sm text-center py-8">
-          No notes in this folder
+          {t("noNotes")}
         </p>
       ) : (
         notes.map((note, idx) => {
@@ -449,7 +450,7 @@ export function AccordionView() {
               {isDropTarget && (
                 <div style={{ height: 3, backgroundColor: "var(--accent)", marginTop: -1 }} />
               )}
-              <div className="flex items-center px-3 py-2.5 bg-neutral-800/40 hover:bg-neutral-800/80 transition-colors">
+              <div className="flex items-center px-3 py-2.5 bg-neutral-800/70 hover:bg-neutral-800/90 transition-colors">
                 {isManual && (
                   <div
                     onPointerDown={(e) => handleGripDown(e, idx)}
@@ -474,7 +475,7 @@ export function AccordionView() {
                         if (e.key === "Enter") { e.currentTarget.blur(); submitRename(); }
                         if (e.key === "Escape") { setRenamingPath(null); setRenameError(""); }
                       }}
-                      placeholder="Note title..."
+                      placeholder={t("noteTitle")}
                       className="w-full bg-black/30 border border-neutral-600 rounded px-2 py-0.5
                                  text-sm text-app focus:outline-none focus:border-neutral-500"
                     />
@@ -511,7 +512,7 @@ export function AccordionView() {
                         ? "text-amber-400"
                         : "text-app-faint hover:text-app-muted"
                     }`}
-                    title={vault?.noteOverrides[note.relativePath]?.pinned ? "Unpin" : "Pin to top"}
+                    title={vault?.noteOverrides[note.relativePath]?.pinned ? t("unpin") : t("pinToTop")}
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill={vault?.noteOverrides[note.relativePath]?.pinned ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 17v5" /><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16h14v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />
@@ -523,7 +524,7 @@ export function AccordionView() {
                   <button
                     onClick={() => setMovingNote({ path: note.absolutePath, name: note.filename })}
                     className="p-0.5 cursor-pointer text-app-faint hover:text-app-muted transition-colors"
-                    title="Move to..."
+                    title={t("moveNote")}
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
@@ -579,7 +580,7 @@ export function AccordionView() {
                       startInEditMode={justCreatedPath === note.absolutePath}
                     />
                   ) : (
-                    <p className="text-app-faint text-xs">Loading...</p>
+                    <p className="text-app-faint text-xs">{t("loading")}</p>
                   )}
                 </div>
               )}
@@ -589,7 +590,7 @@ export function AccordionView() {
       )}
       <ConfirmDialog
         isOpen={deletingNote !== null}
-        message={`Delete "${deletingNote?.name}"?`}
+        message={`${t("delete_")} "${deletingNote?.name}"?`}
         onConfirm={async () => {
           if (deletingNote) {
             // Check if it's a folder (folders are in the folders list)

@@ -5,11 +5,13 @@ import { useNotes } from "../../hooks/useNotes";
 import { t } from "../../lib/i18n";
 import type { SortMode } from "../../types";
 
-const sortLabels: Record<SortMode, string> = {
-  alphabetical: "A-Z",
-  modified: "Recent",
-  manual: "Manual",
-};
+function getSortLabels(): Record<SortMode, string> {
+  return {
+    alphabetical: t("alphabetical"),
+    modified: t("recent"),
+    manual: t("manual"),
+  };
+}
 
 export function NoteListHeader() {
   const getActiveVault = useStore((s) => s.getActiveVault);
@@ -37,7 +39,7 @@ export function NoteListHeader() {
 
   const handleQuickCreate = useCallback(async () => {
     try {
-      let name = "Untitled";
+      let name = t("untitled");
       let counter = 1;
       let created = false;
       while (!created) {
@@ -48,7 +50,7 @@ export function NoteListHeader() {
           created = true;
         } catch {
           counter++;
-          name = `Untitled ${counter}`;
+          name = `${t("untitled")} ${counter}`;
         }
       }
     } catch (e) {
@@ -134,9 +136,9 @@ export function NoteListHeader() {
             onClick={cycleSortMode}
             className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-800 text-app-faint
                        hover:text-app hover:bg-neutral-700 transition-colors cursor-pointer"
-            title={`Sort: ${sortLabels[effectiveSortMode]} (click to cycle)`}
+            title={`${t("sort")}: ${getSortLabels()[effectiveSortMode]} (${t("clickToCycle")})`}
           >
-            {sortLabels[effectiveSortMode]}
+            {getSortLabels()[effectiveSortMode]}
           </button>
           {effectiveSortMode !== "manual" && (
             <button
@@ -147,7 +149,10 @@ export function NoteListHeader() {
                 } catch (e) { console.error(e); }
               }}
               className="text-app-faint hover:text-app cursor-pointer p-0.5 transition-colors"
-              title={effectiveSortDescending ? "Newest/Z first" : "Oldest/A first"}
+              title={effectiveSortDescending
+                ? (effectiveSortMode === "modified" ? t("newestFirst") : t("zFirst"))
+                : (effectiveSortMode === "modified" ? t("oldestFirst") : t("aFirst"))
+              }
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                    className={`transition-transform ${effectiveSortDescending ? "" : "rotate-180"}`}>
@@ -160,7 +165,7 @@ export function NoteListHeader() {
           <button
             onClick={() => setShowNewFolder(!showNewFolder)}
             className="p-1 text-app-faint hover:text-app transition-colors cursor-pointer"
-            title="New folder"
+            title={t("newFolder")}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
@@ -174,7 +179,7 @@ export function NoteListHeader() {
                        border border-neutral-700 hover:border-neutral-600
                        rounded text-app transition-colors cursor-pointer"
           >
-            + Add
+            {t("addNote")}
           </button>
         </div>
       </div>
@@ -190,7 +195,7 @@ export function NoteListHeader() {
                 if (e.key === "Enter") handleCreateFolder();
                 if (e.key === "Escape") { setShowNewFolder(false); setFolderName(""); setFolderError(""); }
               }}
-              placeholder="Folder name..."
+              placeholder={t("folderName")}
               className="flex-1 bg-black/20 border border-neutral-700 rounded px-2.5 py-1.5
                          text-sm text-app focus:outline-none focus:border-neutral-500"
             />
@@ -199,7 +204,7 @@ export function NoteListHeader() {
               style={{ backgroundColor: "var(--accent)" }}
               className="px-3 py-1.5 rounded text-sm text-white cursor-pointer"
             >
-              Create
+              {t("create")}
             </button>
           </div>
           {folderError && <p className="text-xs text-red-400 mt-1">{folderError}</p>}

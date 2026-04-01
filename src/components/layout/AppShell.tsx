@@ -2,19 +2,12 @@ import { SlideTab } from "./SlideTab";
 import { TitleBar } from "./TitleBar";
 import { useStore } from "../../stores/store";
 import { quitApp } from "../../lib/tauri";
-
-function hexToRgba(hex: string, alpha: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
+import { t } from "../../lib/i18n";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const isSlid = useStore((s) => s.isSlid);
   const edge = useStore((s) => s.windowConfig.edge);
   const panelColor = useStore((s) => s.windowConfig.panelColor);
-  const vibrancy = useStore((s) => s.windowConfig.vibrancy);
   const view = useStore((s) => s.view);
 
   const isHorizontal = edge === "top" || edge === "bottom";
@@ -26,16 +19,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     bottom: "rounded-t-lg",
   }[edge];
 
-  const panelBg = isSlid
-    ? vibrancy ? hexToRgba(panelColor, 0.92) : panelColor
-    : "transparent";
-
   const panelStyle: React.CSSProperties = {
-    backgroundColor: panelBg,
-    ...(isSlid && vibrancy ? {
-      backdropFilter: "blur(30px) saturate(180%)",
-      WebkitBackdropFilter: "blur(30px) saturate(180%)",
-    } : {}),
+    backgroundColor: isSlid ? panelColor : "transparent",
   };
 
   const panel = (
@@ -53,7 +38,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <button
               onClick={() => quitApp()}
               className="absolute bottom-3 right-3 p-2 text-app-faint hover:text-red-400 transition-colors cursor-pointer rounded-full hover:bg-black/10"
-              title="Quit Sidewinder"
+              title={t("quitSidewinder")}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />

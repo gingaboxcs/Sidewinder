@@ -1,5 +1,6 @@
 import { useStore } from "../../stores/store";
 import { updateNoteOverride, loadConfig } from "../../lib/tauri";
+import { t } from "../../lib/i18n";
 import type { ViewMode } from "../../types";
 
 interface Props {
@@ -57,9 +58,9 @@ export function ViewModeSelector({ noteRelativePath, compact }: Props) {
   };
 
   const tooltips: Record<string, string> = {
-    accordion: "Accordion mode",
-    full: "Full note mode",
-    "always-open": "Always open mode",
+    accordion: t("accordionMode"),
+    full: t("fullNoteMode"),
+    "always-open": t("alwaysOpenMode"),
   };
 
   if (!compact) return null;
@@ -73,7 +74,7 @@ export function ViewModeSelector({ noteRelativePath, compact }: Props) {
           ? ""
           : "bg-neutral-700/40 text-app-faint hover:text-app-muted"
       }`}
-      title={`${tooltips[currentMode]}${hasOverride ? " (override)" : ""} - click to cycle`}
+      title={`${tooltips[currentMode]}${hasOverride ? ` (${t("override")})` : ""} - ${t("clickToCycle")}`}
     >
       {labels[currentMode]}
     </button>

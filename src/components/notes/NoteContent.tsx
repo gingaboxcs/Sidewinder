@@ -6,6 +6,7 @@ import hljs from "highlight.js";
 import { saveNote } from "../../lib/tauri";
 import { useStore } from "../../stores/store";
 import type { EditMode } from "../../types";
+import { t } from "../../lib/i18n";
 
 interface Props {
   content: string;
@@ -78,7 +79,7 @@ function SaveIndicator({ status }: { status: string }) {
   if (!status) return null;
   return (
     <span className="text-[10px] text-app-faint">
-      {status === "saving" ? "Saving..." : "Saved"}
+      {status === "saving" ? t("saving") : t("saved")}
     </span>
   );
 }
@@ -108,13 +109,13 @@ function MarkdownEditor({ content, absolutePath, startInEditMode }: { content: s
       <div>
         <div className="flex items-center justify-between mb-2 sticky top-0 z-10 py-1" style={{ backgroundColor: "inherit" }}>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-700/40 text-app-faint">Markdown</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-700/40 text-app-faint">{t("markdown")}</span>
             <SaveIndicator status={saveStatus} />
           </div>
           <button
             onClick={() => { saveNow(editContent); setIsEditing(false); }}
             className="text-[10px] text-app-faint hover:text-app cursor-pointer px-1.5 py-0.5"
-          >Done</button>
+          >{t("done")}</button>
         </div>
         <textarea
           ref={textareaRef}
@@ -202,13 +203,13 @@ function CodeEditor({ content, absolutePath, startInEditMode }: { content: strin
       <div>
         <div className="flex items-center justify-between mb-2 sticky top-0 z-10 py-1" style={{ backgroundColor: "inherit" }}>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-700/40 text-app-faint">Code</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-700/40 text-app-faint">{t("code")}</span>
             <SaveIndicator status={saveStatus} />
           </div>
           <button
             onClick={() => { saveNow(editContent); setIsEditing(false); }}
             className="text-[10px] text-app-faint hover:text-app cursor-pointer px-1.5 py-0.5"
-          >Done</button>
+          >{t("done")}</button>
         </div>
         {/* Overlay approach: highlighted HTML behind, transparent textarea on top */}
         <div className="relative">
@@ -295,26 +296,26 @@ function PlainTextEditor({ content, absolutePath, startInEditMode }: { content: 
 
   const toolbar = (
     <div className="flex items-center gap-0.5 flex-wrap">
-      <ToolbarBtn onClick={() => exec("bold")} title="Bold">
+      <ToolbarBtn onClick={() => exec("bold")} title={t("bold")}>
         <strong>B</strong>
       </ToolbarBtn>
-      <ToolbarBtn onClick={() => exec("italic")} title="Italic">
+      <ToolbarBtn onClick={() => exec("italic")} title={t("italic")}>
         <em>I</em>
       </ToolbarBtn>
-      <ToolbarBtn onClick={() => exec("underline")} title="Underline">
+      <ToolbarBtn onClick={() => exec("underline")} title={t("underline")}>
         <span className="underline">U</span>
       </ToolbarBtn>
-      <ToolbarBtn onClick={() => exec("strikeThrough")} title="Strikethrough">
+      <ToolbarBtn onClick={() => exec("strikeThrough")} title={t("strikethrough")}>
         <span className="line-through">S</span>
       </ToolbarBtn>
       <div className="w-px h-4 bg-neutral-700 mx-1" />
-      <ToolbarBtn onClick={() => exec("insertUnorderedList")} title="Bullet list">
+      <ToolbarBtn onClick={() => exec("insertUnorderedList")} title={t("bulletList")}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/>
           <circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="4" cy="12" r="1.5" fill="currentColor"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/>
         </svg>
       </ToolbarBtn>
-      <ToolbarBtn onClick={() => exec("insertOrderedList")} title="Numbered list">
+      <ToolbarBtn onClick={() => exec("insertOrderedList")} title={t("numberedList")}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <line x1="10" y1="6" x2="20" y2="6"/><line x1="10" y1="12" x2="20" y2="12"/><line x1="10" y1="18" x2="20" y2="18"/>
           <text x="2" y="8" fontSize="7" fill="currentColor" stroke="none">1</text>
@@ -323,16 +324,16 @@ function PlainTextEditor({ content, absolutePath, startInEditMode }: { content: 
         </svg>
       </ToolbarBtn>
       <div className="w-px h-4 bg-neutral-700 mx-1" />
-      <ToolbarBtn onClick={() => exec("formatBlock", "h1")} title="Heading 1">
+      <ToolbarBtn onClick={() => exec("formatBlock", "h1")} title={t("heading1")}>
         <span className="text-[10px] font-bold">H1</span>
       </ToolbarBtn>
-      <ToolbarBtn onClick={() => exec("formatBlock", "h2")} title="Heading 2">
+      <ToolbarBtn onClick={() => exec("formatBlock", "h2")} title={t("heading2")}>
         <span className="text-[10px] font-bold">H2</span>
       </ToolbarBtn>
-      <ToolbarBtn onClick={() => exec("formatBlock", "h3")} title="Heading 3">
+      <ToolbarBtn onClick={() => exec("formatBlock", "h3")} title={t("heading3")}>
         <span className="text-[10px] font-bold">H3</span>
       </ToolbarBtn>
-      <ToolbarBtn onClick={() => exec("formatBlock", "p")} title="Paragraph">
+      <ToolbarBtn onClick={() => exec("formatBlock", "p")} title={t("paragraph")}>
         <span className="text-[10px]">P</span>
       </ToolbarBtn>
       <div className="flex-1" />
@@ -364,11 +365,11 @@ function PlainTextEditor({ content, absolutePath, startInEditMode }: { content: 
     <div>
       <div className="sticky top-0 z-10 py-1 mb-2" style={{ backgroundColor: "inherit" }}>
         <div className="flex items-center justify-between">
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-700/40 text-app-faint">Rich Text</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-700/40 text-app-faint">{t("richText")}</span>
           <button
             onClick={() => { saveNow(getContent()); setIsEditing(false); }}
             className="text-[10px] text-app-faint hover:text-app cursor-pointer px-1.5 py-0.5"
-          >Done</button>
+          >{t("done")}</button>
         </div>
         <div className="mt-1.5 px-1 py-1 bg-neutral-800/80 rounded border border-neutral-700/50">
           {toolbar}

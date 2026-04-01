@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useStore } from "../../stores/store";
+import { t } from "../../lib/i18n";
 import type { EditMode, SortMode, Vault, ViewMode } from "../../types";
 
 interface Props {
@@ -49,7 +50,7 @@ export function VaultEditDialog({ vault, onClose, onSave }: Props) {
 
   const handleSubmit = async () => {
     if (!name.trim()) {
-      setError("Name is required");
+      setError(t("nameRequired"));
       return;
     }
     setError("");
@@ -66,7 +67,7 @@ export function VaultEditDialog({ vault, onClose, onSave }: Props) {
       });
       onClose();
     } catch (e: any) {
-      setError(e?.toString() || "Failed to save vault");
+      setError(e?.toString() || t("failedToSave"));
     } finally {
       setSaving(false);
     }
@@ -75,11 +76,11 @@ export function VaultEditDialog({ vault, onClose, onSave }: Props) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-neutral-800 rounded-lg border border-neutral-700 w-full max-w-sm p-5">
-        <h2 className="text-base font-semibold text-app mb-4">Edit Vault</h2>
+        <h2 className="text-base font-semibold text-app mb-4">{t("editVault")}</h2>
 
         <div className="space-y-3">
           <div>
-            <label className="text-xs text-app-muted block mb-1">Name</label>
+            <label className="text-xs text-app-muted block mb-1">{t("name")}</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -89,7 +90,7 @@ export function VaultEditDialog({ vault, onClose, onSave }: Props) {
           </div>
 
           <div>
-            <label className="text-xs text-app-muted block mb-1">Path</label>
+            <label className="text-xs text-app-muted block mb-1">{t("path")}</label>
             <div className="flex gap-2">
               <input
                 value={path}
@@ -102,49 +103,49 @@ export function VaultEditDialog({ vault, onClose, onSave }: Props) {
                 className="px-3 py-1.5 bg-neutral-700 hover:bg-neutral-600 rounded text-sm
                            text-app-muted transition-colors cursor-pointer"
               >
-                Browse
+                {t("browse")}
               </button>
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-2">
             <div>
-              <label className="text-xs text-app-muted block mb-1">View</label>
+              <label className="text-xs text-app-muted block mb-1">{t("view")}</label>
               <select
                 value={viewMode}
                 onChange={(e) => setViewMode(e.target.value as ViewMode)}
                 className="w-full bg-neutral-900 border border-neutral-700 rounded px-3 py-1.5
                            text-sm text-app focus:outline-none focus:border-neutral-500"
               >
-                <option value="accordion">Accordion</option>
-                <option value="full">Full Note</option>
-                <option value="always-open">Always Open</option>
+                <option value="accordion">{t("accordion")}</option>
+                <option value="full">{t("full")}</option>
+                <option value="always-open">{t("alwaysOpen")}</option>
               </select>
             </div>
             <div>
-              <label className="text-xs text-app-muted block mb-1">Edit</label>
+              <label className="text-xs text-app-muted block mb-1">{t("edit")}</label>
               <select
                 value={editMode}
                 onChange={(e) => setEditMode(e.target.value as EditMode)}
                 className="w-full bg-neutral-900 border border-neutral-700 rounded px-3 py-1.5
                            text-sm text-app focus:outline-none focus:border-neutral-500"
               >
-                <option value="markdown">Markdown</option>
-                <option value="code">Code</option>
-                <option value="plaintext">Plain Text</option>
+                <option value="markdown">{t("markdown")}</option>
+                <option value="code">{t("code")}</option>
+                <option value="plaintext">{t("plainText")}</option>
               </select>
             </div>
             <div>
-              <label className="text-xs text-app-muted block mb-1">Sort</label>
+              <label className="text-xs text-app-muted block mb-1">{t("sort")}</label>
               <select
                 value={sortMode}
                 onChange={(e) => setSortMode(e.target.value as SortMode)}
                 className="w-full bg-neutral-900 border border-neutral-700 rounded px-3 py-1.5
                            text-sm text-app focus:outline-none focus:border-neutral-500"
               >
-                <option value="alphabetical">A-Z</option>
-                <option value="modified">Recent</option>
-                <option value="manual">Manual</option>
+                <option value="alphabetical">{t("alphabetical")}</option>
+                <option value="modified">{t("recent")}</option>
+                <option value="manual">{t("manual")}</option>
               </select>
             </div>
           </div>
@@ -156,7 +157,7 @@ export function VaultEditDialog({ vault, onClose, onSave }: Props) {
               onChange={(e) => setRecursive(e.target.checked)}
               className="rounded border-neutral-600"
             />
-            <span className="text-sm text-app">Include subfolders</span>
+            <span className="text-sm text-app">{t("includeSubfolders")}</span>
           </label>
 
           {error && (
@@ -170,7 +171,7 @@ export function VaultEditDialog({ vault, onClose, onSave }: Props) {
             className="px-3 py-1.5 text-sm text-app-muted hover:text-app
                        transition-colors cursor-pointer"
           >
-            Cancel
+            {t("cancel")}
           </button>
           <button
             onClick={handleSubmit}
@@ -179,7 +180,7 @@ export function VaultEditDialog({ vault, onClose, onSave }: Props) {
             className="px-4 py-1.5 rounded text-sm
                        text-white transition-colors cursor-pointer"
           >
-            {saving ? "Saving..." : "Save"}
+            {saving ? t("save") + "..." : t("save")}
           </button>
         </div>
       </div>

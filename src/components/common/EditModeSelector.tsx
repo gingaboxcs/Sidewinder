@@ -1,5 +1,6 @@
 import { useStore } from "../../stores/store";
 import { updateNoteOverride, loadConfig } from "../../lib/tauri";
+import { t } from "../../lib/i18n";
 import type { EditMode } from "../../types";
 
 interface Props {
@@ -55,9 +56,9 @@ export function EditModeSelector({ noteRelativePath }: Props) {
   };
 
   const tooltips: Record<EditMode, string> = {
-    markdown: "Markdown",
-    code: "Code",
-    plaintext: "Plain text",
+    markdown: t("markdown"),
+    code: t("code"),
+    plaintext: t("plainText"),
   };
 
   return (
@@ -69,7 +70,7 @@ export function EditModeSelector({ noteRelativePath }: Props) {
           ? ""
           : "bg-neutral-700/40 text-app-faint hover:text-app-muted"
       }`}
-      title={`${tooltips[currentMode]}${hasOverride ? " (override)" : ""} - click to cycle`}
+      title={`${tooltips[currentMode]}${hasOverride ? ` (${t("override")})` : ""} - ${t("clickToCycle")}`}
     >
       {labels[currentMode]}
     </button>

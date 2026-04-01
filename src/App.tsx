@@ -13,6 +13,8 @@ import { useStore } from "./stores/store";
 import { loadConfig, slideWindow, watchElysium, unwatchElysium, getElysiumUserProfile, followMonitor, quitApp } from "./lib/tauri";
 import { setLanguage, detectSystemLanguage } from "./lib/i18n";
 import { register, unregisterAll } from "@tauri-apps/plugin-global-shortcut";
+import { check } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
 import "./styles.css";
 
 function App() {
@@ -31,6 +33,40 @@ function App() {
   const shortcutsConfig = useStore((s) => s.shortcutsConfig);
   const [ready, setReady] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [updateAvailable, setUpdateAvailable] = useState<{ version: string; body: string } | null>(null);
+  const [updateStatus, setUpdateStatus] = useState<"" | "downloading" | "installing">("");
+
+  // Check for updates on launch
+  useEffect(() => {
+    if (!ready) return;
+    const checkUpdate = async () => {
+      try {
+        const update = await check();
+        if (update) {
+          setUpdateAvailable({ version: update.version, body: update.body || "" });
+        }
+      } catch (e) {
+        console.error("Update check failed:", e);
+      }
+    };
+    // Delay a few seconds so the app finishes loading first
+    const timer = setTimeout(checkUpdate, 5000);
+    return () => clearTimeout(timer);
+  }, [ready]);
+
+  const handleUpdate = async () => {
+    try {
+      setUpdateStatus("downloading");
+      const update = await check();
+      if (!update) return;
+      setUpdateStatus("installing");
+      await update.downloadAndInstall();
+      await relaunch();
+    } catch (e) {
+      console.error("Update failed:", e);
+      setUpdateStatus("");
+    }
+  };
 
   // Load config before first render
   useEffect(() => {
@@ -239,6 +275,21 @@ function App() {
 
   return (
     <AppShell>
+      {updateAvailable && view === "vault-list" && (
+        <div className="mx-3 mt-2 px-3 py-2 rounded-lg border border-neutral-700/50 bg-neutral-800/80 flex items-center justify-between gap-2">
+          <p className="text-xs text-app-muted">
+            v{updateAvailable.version} available
+          </p>
+          <button
+            onClick={handleUpdate}
+            disabled={updateStatus !== ""}
+            style={{ backgroundColor: "var(--accent)" }}
+            className="text-xs px-2.5 py-1 rounded text-white cursor-pointer disabled:opacity-50"
+          >
+            {updateStatus === "downloading" ? "Downloading..." : updateStatus === "installing" ? "Installing..." : "Update"}
+          </button>
+        </div>
+      )}
       {view === "vault-list" && <VaultList />}
       {view === "note-list" && (activeVaultId?.startsWith("elysium-") ? <ElysiumNotesView /> : <NoteList />)}
       {view === "note-full" && <FullNoteView />}

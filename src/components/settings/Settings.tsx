@@ -126,11 +126,11 @@ export function Settings() {
               : "bg-neutral-800 text-app-faint cursor-not-allowed"
           }`}
         >
-          {saving ? "Applying..." : "Apply Changes"}
+          {saving ? t("applying") : t("applyChanges")}
         </button>
         {hasChanges && (
           <p className="text-[10px] text-amber-400/70 text-center mt-2">
-            The panel will collapse and reposition when you apply
+            {t("panelWillCollapse")}
           </p>
         )}
       </div>
@@ -149,20 +149,24 @@ function GeneralTab({ localConfig, setLocalConfig, localLanguage, setLocalLangua
   const isHorizontalEdge = localConfig.edge === "top" || localConfig.edge === "bottom";
 
   const alignmentLabels: Record<Alignment, string> = isHorizontalEdge
-    ? { start: "Left", center: "Center", end: "Right" }
-    : { start: "Top", center: "Center", end: "Bottom" };
+    ? { start: t("left"), center: t("center"), end: t("right") }
+    : { start: t("top"), center: t("center"), end: t("bottom") };
 
-  const thicknessLabel = isHorizontalEdge ? "Handle Height" : "Handle Width";
-  const lengthLabel = isHorizontalEdge ? "Handle Width" : "Handle Height";
+  const thicknessLabel = isHorizontalEdge ? t("handleHeight") : t("handleWidth");
+  const lengthLabel = isHorizontalEdge ? t("handleWidth") : t("handleHeight");
 
   return (
     <>
       {/* Language */}
       <div>
-        <label className="text-xs text-app-muted block mb-2">Language</label>
+        <label className="text-xs text-app-muted block mb-2">{t("language")}</label>
         <select
           value={localLanguage}
-          onChange={(e) => setLocalLanguage(e.target.value)}
+          onChange={(e) => {
+            setLocalLanguage(e.target.value);
+            setLanguage(e.target.value);
+            useStore.getState().setLanguage(e.target.value);
+          }}
           className="w-full bg-neutral-900 border border-neutral-700 rounded px-3 py-1.5
                      text-sm text-app focus:outline-none focus:border-neutral-500"
         >
@@ -174,7 +178,7 @@ function GeneralTab({ localConfig, setLocalConfig, localLanguage, setLocalLangua
 
       {/* Edge Position */}
       <div>
-        <label className="text-xs text-app-muted block mb-2">Screen Edge</label>
+        <label className="text-xs text-app-muted block mb-2">{t("screenEdge")}</label>
         <div className="grid grid-cols-4 gap-1.5">
           {(["left", "top", "right", "bottom"] as Edge[]).map((edge) => (
             <button
@@ -196,7 +200,7 @@ function GeneralTab({ localConfig, setLocalConfig, localLanguage, setLocalLangua
       {/* Alignment */}
       <div>
         <label className="text-xs text-app-muted block mb-2">
-          Alignment along {isHorizontalEdge ? "horizontal" : "vertical"} axis
+          {isHorizontalEdge ? t("alignAlongHorizontal") : t("alignAlongVertical")}
         </label>
         <div className="grid grid-cols-3 gap-1.5">
           {(["start", "center", "end"] as Alignment[]).map((align) => (
@@ -248,7 +252,7 @@ function GeneralTab({ localConfig, setLocalConfig, localLanguage, setLocalLangua
       {/* Panel Width */}
       <div>
         <label className="text-xs text-app-muted block mb-2">
-          Panel Width: {localConfig.panelWidthPct}%
+          {t("panelWidth")}: {localConfig.panelWidthPct}%
         </label>
         <input type="range" min={10} max={100} value={localConfig.panelWidthPct}
           onChange={(e) => setLocalConfig({ ...localConfig, panelWidthPct: parseInt(e.target.value) })}
@@ -261,7 +265,7 @@ function GeneralTab({ localConfig, setLocalConfig, localLanguage, setLocalLangua
       {/* Panel Height */}
       <div>
         <label className="text-xs text-app-muted block mb-2">
-          Panel Height: {localConfig.panelHeightPct}%
+          {t("panelHeight")}: {localConfig.panelHeightPct}%
         </label>
         <input type="range" min={10} max={100} value={localConfig.panelHeightPct}
           onChange={(e) => setLocalConfig({ ...localConfig, panelHeightPct: parseInt(e.target.value) })}
@@ -274,26 +278,26 @@ function GeneralTab({ localConfig, setLocalConfig, localLanguage, setLocalLangua
       {/* Animation Speed */}
       <div>
         <label className="text-xs text-app-muted block mb-2">
-          Animation Speed: {localConfig.animationDuration}ms
+          {t("animationSpeed")}: {localConfig.animationDuration}ms
         </label>
         <input type="range" min={0} max={800} step={10} value={localConfig.animationDuration}
           onChange={(e) => setLocalConfig({ ...localConfig, animationDuration: parseInt(e.target.value) })}
           className="w-full" />
         <div className="flex justify-between text-[10px] text-app-faint mt-0.5">
-          <span>Instant</span><span>800ms</span>
+          <span>{t("instant")}</span><span>800ms</span>
         </div>
       </div>
 
       {/* Animation Delay */}
       <div>
         <label className="text-xs text-app-muted block mb-2">
-          Animation Delay: {localConfig.animationDelay}ms
+          {t("animationDelay")}: {localConfig.animationDelay}ms
         </label>
         <input type="range" min={0} max={500} step={10} value={localConfig.animationDelay}
           onChange={(e) => setLocalConfig({ ...localConfig, animationDelay: parseInt(e.target.value) })}
           className="w-full" />
         <div className="flex justify-between text-[10px] text-app-faint mt-0.5">
-          <span>None</span><span>500ms</span>
+          <span>{t("none")}</span><span>500ms</span>
         </div>
       </div>
 
@@ -314,7 +318,7 @@ function GeneralTab({ localConfig, setLocalConfig, localLanguage, setLocalLangua
               }`}
             />
           </button>
-          <span className="text-sm text-app-muted">Close panel when clicking outside</span>
+          <span className="text-sm text-app-muted">{t("closeOnBlur")}</span>
         </label>
       </div>
 
@@ -323,11 +327,11 @@ function GeneralTab({ localConfig, setLocalConfig, localLanguage, setLocalLangua
 
       {/* Monitor behavior */}
       <div>
-        <label className="text-xs text-app-muted block mb-2">Multi-Monitor</label>
+        <label className="text-xs text-app-muted block mb-2">{t("multiMonitor")}</label>
         <div className="grid grid-cols-2 gap-1.5">
           {([
-            { id: "primary" as const, label: "Stay on one monitor" },
-            { id: "follow" as const, label: "Follow active monitor" },
+            { id: "primary" as const, label: t("stayOnOne") },
+            { id: "follow" as const, label: t("followActive") },
           ]).map(({ id, label }) => (
             <button
               key={id}
@@ -392,7 +396,7 @@ function LaunchAtLoginToggle() {
             }`}
           />
         </button>
-        <span className="text-sm text-app-muted">Launch at login</span>
+        <span className="text-sm text-app-muted">{t("launchAtLogin")}</span>
       </label>
     </div>
   );
@@ -425,7 +429,7 @@ function AppearanceTab({ localConfig, setLocalConfig }: {
     <>
       {/* Theme — available to all */}
       <div>
-        <label className="text-xs text-app-muted block mb-2">Theme</label>
+        <label className="text-xs text-app-muted block mb-2">{t("theme")}</label>
         <div className="grid grid-cols-2 gap-1.5">
           {(["dark", "light"] as const).map((theme) => (
             <button
@@ -443,7 +447,7 @@ function AppearanceTab({ localConfig, setLocalConfig }: {
                   : "bg-neutral-800 text-app-muted hover:bg-neutral-700 hover:text-app"
               }`}
             >
-              {theme.charAt(0).toUpperCase() + theme.slice(1)}
+              {theme === "dark" ? t("dark") : t("light")}
             </button>
           ))}
         </div>
@@ -452,8 +456,8 @@ function AppearanceTab({ localConfig, setLocalConfig }: {
       {/* Vibrancy — available to all */}
       <div className="flex items-center justify-between">
         <div>
-          <span className="text-sm text-app">Frosted Glass</span>
-          <p className="text-[10px] text-app-faint mt-0.5">Translucent blur effect on handle and panel</p>
+          <span className="text-sm text-app">{t("frostedGlass")}</span>
+          <p className="text-[10px] text-app-faint mt-0.5">{t("frostedGlassDesc")}</p>
         </div>
         <button
           onClick={() => setLocalConfig({ ...localConfig, vibrancy: !localConfig.vibrancy })}
@@ -471,7 +475,7 @@ function AppearanceTab({ localConfig, setLocalConfig }: {
       {!isPro && (
         <div className="p-3 rounded-lg border border-amber-400/20 bg-amber-400/5">
           <p className="text-xs text-app-muted">
-            Custom colors, fonts, and typography are available with Sidewinder Pro.
+            {t("proColorsDesc")}
           </p>
         </div>
       )}
@@ -479,17 +483,17 @@ function AppearanceTab({ localConfig, setLocalConfig }: {
       <div className={`space-y-5 ${!isPro ? "opacity-50 pointer-events-none" : ""}`}>
       {/* Colors */}
       <div className="grid grid-cols-2 gap-3">
-        <ColorPicker label="Handle" value={localConfig.handleColor}
+        <ColorPicker label={t("handleColor")} value={localConfig.handleColor}
           onChange={(v) => setLocalConfig({ ...localConfig, handleColor: v })} />
-        <ColorPicker label="Panel" value={localConfig.panelColor}
+        <ColorPicker label={t("panelColorLabel")} value={localConfig.panelColor}
           onChange={(v) => setLocalConfig({ ...localConfig, panelColor: v })} />
-        <ColorPicker label="Accent" value={localConfig.accentColor}
+        <ColorPicker label={t("accentColor")} value={localConfig.accentColor}
           onChange={(v) => setLocalConfig({ ...localConfig, accentColor: v })} />
-        <ColorPicker label="Text" value={localConfig.textColor}
+        <ColorPicker label={t("textColor")} value={localConfig.textColor}
           onChange={(v) => setLocalConfig({ ...localConfig, textColor: v })} />
       </div>
       <div>
-        <label className="text-xs text-app-muted block mb-2">Font Family</label>
+        <label className="text-xs text-app-muted block mb-2">{t("fontFamily")}</label>
         <select
           value={localConfig.fontFamily}
           onChange={(e) => setLocalConfig({ ...localConfig, fontFamily: e.target.value })}
@@ -505,7 +509,7 @@ function AppearanceTab({ localConfig, setLocalConfig }: {
       {/* Font Size */}
       <div>
         <label className="text-xs text-app-muted block mb-2">
-          Font Size: {localConfig.fontSize}px
+          {t("fontSize")}: {localConfig.fontSize}px
         </label>
         <input type="range" min={10} max={24} value={localConfig.fontSize}
           onChange={(e) => setLocalConfig({ ...localConfig, fontSize: parseInt(e.target.value) })}
@@ -518,7 +522,7 @@ function AppearanceTab({ localConfig, setLocalConfig }: {
       {/* Line Height */}
       <div>
         <label className="text-xs text-app-muted block mb-2">
-          Line Height: {(localConfig.lineHeight / 100).toFixed(1)}
+          {t("lineHeight")}: {(localConfig.lineHeight / 100).toFixed(1)}
         </label>
         <input type="range" min={100} max={250} step={10} value={localConfig.lineHeight}
           onChange={(e) => setLocalConfig({ ...localConfig, lineHeight: parseInt(e.target.value) })}
@@ -531,7 +535,7 @@ function AppearanceTab({ localConfig, setLocalConfig }: {
       {/* Paragraph Spacing */}
       <div>
         <label className="text-xs text-app-muted block mb-2">
-          Paragraph Spacing: {localConfig.paragraphSpacing}px
+          {t("paragraphSpacing")}: {localConfig.paragraphSpacing}px
         </label>
         <input type="range" min={0} max={32} value={localConfig.paragraphSpacing}
           onChange={(e) => setLocalConfig({ ...localConfig, paragraphSpacing: parseInt(e.target.value) })}
@@ -556,12 +560,12 @@ function CreationTab({ localConfig, setLocalConfig }: {
     <>
       {/* Default Edit Mode */}
       <div>
-        <label className="text-xs text-app-muted block mb-2">Default Formatting</label>
+        <label className="text-xs text-app-muted block mb-2">{t("defaultFormatting")}</label>
         <div className="grid grid-cols-3 gap-1.5">
           {([
-            { id: "markdown" as EditMode, label: "Markdown" },
-            { id: "code" as EditMode, label: "Code" },
-            { id: "plaintext" as EditMode, label: "Plain Text" },
+            { id: "markdown" as EditMode, label: t("markdown") },
+            { id: "code" as EditMode, label: t("code") },
+            { id: "plaintext" as EditMode, label: t("plainText") },
           ]).map(({ id, label }) => (
             <button
               key={id}
@@ -581,11 +585,11 @@ function CreationTab({ localConfig, setLocalConfig }: {
 
       {/* Default New Note Position */}
       <div>
-        <label className="text-xs text-app-muted block mb-2">New Note Position (Manual Sort)</label>
+        <label className="text-xs text-app-muted block mb-2">{t("newNotePosition")}</label>
         <div className="grid grid-cols-2 gap-1.5">
           {([
-            { id: "top" as InsertPosition, label: "Top" },
-            { id: "bottom" as InsertPosition, label: "Bottom" },
+            { id: "top" as InsertPosition, label: t("top") },
+            { id: "bottom" as InsertPosition, label: t("bottom") },
           ]).map(({ id, label }) => (
             <button
               key={id}
@@ -605,11 +609,11 @@ function CreationTab({ localConfig, setLocalConfig }: {
 
       {/* Default New Vault Position */}
       <div>
-        <label className="text-xs text-app-muted block mb-2">New Vault Position (Manual Sort)</label>
+        <label className="text-xs text-app-muted block mb-2">{t("newVaultPosition")}</label>
         <div className="grid grid-cols-2 gap-1.5">
           {([
-            { id: "top" as InsertPosition, label: "Top" },
-            { id: "bottom" as InsertPosition, label: "Bottom" },
+            { id: "top" as InsertPosition, label: t("top") },
+            { id: "bottom" as InsertPosition, label: t("bottom") },
           ]).map(({ id, label }) => (
             <button
               key={id}
@@ -644,7 +648,7 @@ function IntegrationTab({ localElysium, setLocalElysium }: {
   if (!isPro) {
     return (
       <div className="p-4 rounded-lg border border-amber-400/20 bg-amber-400/5">
-        <p className="text-sm text-app font-medium mb-1">Elysium Integration</p>
+        <p className="text-sm text-app font-medium mb-1">{t("elysiumIntegration")}</p>
         <p className="text-xs text-app-muted mb-3">
           Connect Sidewinder to your Elysium account for calendar view, schedule notes, and more. Available with Sidewinder Pro ($4.99) or an active Elysium subscription.
         </p>
@@ -669,7 +673,7 @@ function IntegrationTab({ localElysium, setLocalElysium }: {
   return (
     <>
       <div>
-        <h3 className="text-xs font-semibold text-app-muted uppercase tracking-wider mb-3">Elysium OpenTime</h3>
+        <h3 className="text-xs font-semibold text-app-muted uppercase tracking-wider mb-3">{t("elysiumOpenTime")}</h3>
 
         {/* Enable toggle */}
         <div className="mb-4">
@@ -688,7 +692,7 @@ function IntegrationTab({ localElysium, setLocalElysium }: {
                 }`}
               />
             </button>
-            <span className="text-sm text-app-muted">Enable Elysium integration</span>
+            <span className="text-sm text-app-muted">{t("elysiumIntegration")}</span>
           </label>
         </div>
 
@@ -696,7 +700,7 @@ function IntegrationTab({ localElysium, setLocalElysium }: {
           <div className="space-y-4">
             {/* OpenTime folder path */}
             <div>
-              <label className="text-xs text-app-muted block mb-2">OpenTime Folder</label>
+              <label className="text-xs text-app-muted block mb-2">{t("openTimeFolder")}</label>
               <div className="flex gap-2">
                 <input
                   value={localElysium.opentimePath}
@@ -720,13 +724,13 @@ function IntegrationTab({ localElysium, setLocalElysium }: {
 
             {/* Author identity */}
             <div>
-              <label className="text-xs text-app-muted block mb-2">Your Name</label>
+              <label className="text-xs text-app-muted block mb-2">{t("yourName")}</label>
               <input
                 value={localElysium.authorNameOverride}
                 onChange={(e) => setLocalElysium({ ...localElysium, authorNameOverride: e.target.value })}
                 className="w-full bg-neutral-900 border border-neutral-700 rounded px-3 py-1.5
                            text-sm text-app focus:outline-none focus:border-neutral-500"
-                placeholder="Auto-detect from Elysium"
+                placeholder={t("autoDetect")}
               />
               <p className="text-[10px] text-app-faint mt-1">
                 Name shown on notes you create. Leave empty to use your Elysium profile name.
@@ -734,13 +738,13 @@ function IntegrationTab({ localElysium, setLocalElysium }: {
             </div>
 
             <div>
-              <label className="text-xs text-app-muted block mb-2">Your Email</label>
+              <label className="text-xs text-app-muted block mb-2">{t("yourEmail")}</label>
               <input
                 value={localElysium.authorEmailOverride}
                 onChange={(e) => setLocalElysium({ ...localElysium, authorEmailOverride: e.target.value })}
                 className="w-full bg-neutral-900 border border-neutral-700 rounded px-3 py-1.5
                            text-sm text-app focus:outline-none focus:border-neutral-500"
-                placeholder="Auto-detect from Elysium"
+                placeholder={t("autoDetect")}
               />
             </div>
 
@@ -761,7 +765,7 @@ function IntegrationTab({ localElysium, setLocalElysium }: {
                     }`}
                   />
                 </button>
-                <span className="text-sm text-app-muted">Auto-import schedule notes</span>
+                <span className="text-sm text-app-muted">{t("autoImportNotes")}</span>
               </label>
               <p className="text-[10px] text-app-faint mt-1 ml-12">
                 Automatically create vaults from schedule items with their notes
@@ -771,11 +775,11 @@ function IntegrationTab({ localElysium, setLocalElysium }: {
             {/* Display mode */}
             {localElysium.autoImportNotes && (
               <div>
-                <label className="text-xs text-app-muted block mb-2">Note Vaults Display</label>
+                <label className="text-xs text-app-muted block mb-2">{t("noteVaultsDisplay")}</label>
                 <div className="grid grid-cols-2 gap-1.5">
                   {([
-                    { id: "separate" as const, label: "Separate Section" },
-                    { id: "integrated" as const, label: "Mixed with Vaults" },
+                    { id: "separate" as const, label: t("separateSection") },
+                    { id: "integrated" as const, label: t("integratedView") },
                   ]).map(({ id, label }) => (
                     <button
                       key={id}
@@ -796,7 +800,7 @@ function IntegrationTab({ localElysium, setLocalElysium }: {
 
             {/* Type visibility */}
             <div>
-              <label className="text-xs text-app-muted block mb-2">Show Item Types</label>
+              <label className="text-xs text-app-muted block mb-2">{t("showItemTypes")}</label>
               <div className="grid grid-cols-2 gap-1.5">
                 {(["goal", "task", "event", "appointment", "habit", "reminder", "project"] as const).map((type) => {
                   const hidden = (localElysium.hiddenTypes || []).includes(type);
@@ -842,15 +846,15 @@ function IntegrationTab({ localElysium, setLocalElysium }: {
 
 // ─── Shortcuts Tab ────────────────────────────────────────────────────────────
 
-const shortcutLabels: Record<keyof ShortcutsConfig, string> = {
-  togglePanel: "Toggle Panel",
-  newNote: "New Note",
-  newFolder: "New Folder",
-  goBack: "Go Back",
-  openSettings: "Open Settings",
-  openCalendar: "Open Calendar",
-  quitApp: "Quit App",
-};
+const shortcutLabels = (): Record<keyof ShortcutsConfig, string> => ({
+  togglePanel: t("togglePanel"),
+  newNote: t("newNote"),
+  newFolder: t("newFolderShortcut"),
+  goBack: t("goBack"),
+  openSettings: t("openSettings"),
+  openCalendar: t("openCalendar"),
+  quitApp: t("quitApp"),
+});
 
 function ShortcutsTab({ localShortcuts, setLocalShortcuts }: {
   localShortcuts: ShortcutsConfig;
@@ -897,11 +901,11 @@ function ShortcutsTab({ localShortcuts, setLocalShortcuts }: {
   return (
     <>
       <div>
-        <h3 className="text-xs font-semibold text-app-muted uppercase tracking-wider mb-3">Keyboard Shortcuts</h3>
+        <h3 className="text-xs font-semibold text-app-muted uppercase tracking-wider mb-3">{t("keyboardShortcuts")}</h3>
         <div className="space-y-1">
-          {(Object.keys(shortcutLabels) as Array<keyof ShortcutsConfig>).map((key) => (
+          {(Object.keys(shortcutLabels()) as Array<keyof ShortcutsConfig>).map((key) => (
             <div key={key} className="flex items-center justify-between py-1.5">
-              <span className="text-sm text-app-muted">{shortcutLabels[key]}</span>
+              <span className="text-sm text-app-muted">{shortcutLabels()[key]}</span>
               <button
                 onClick={() => setRecordingKey(recordingKey === key ? null : key)}
                 onKeyDown={(e) => recordingKey === key && handleKeyRecord(e, key)}
@@ -911,7 +915,7 @@ function ShortcutsTab({ localShortcuts, setLocalShortcuts }: {
                     : "bg-neutral-800 text-app-muted border border-neutral-700 hover:border-neutral-600"
                 }`}
               >
-                {recordingKey === key ? "Press keys..." : formatShortcut(localShortcuts[key])}
+                {recordingKey === key ? t("pressKeys") : formatShortcut(localShortcuts[key])}
               </button>
             </div>
           ))}
@@ -931,7 +935,7 @@ function ShortcutsTab({ localShortcuts, setLocalShortcuts }: {
           })}
           className="text-xs text-app-faint hover:text-app cursor-pointer transition-colors"
         >
-          Reset to Defaults
+          {t("resetDefaults")}
         </button>
       </div>
 
@@ -978,14 +982,14 @@ function AccountTab({ localLicense, setLocalLicense }: {
     <>
       {/* Current status */}
       <div>
-        <h3 className="text-xs font-semibold text-app-muted uppercase tracking-wider mb-3">License Status</h3>
+        <h3 className="text-xs font-semibold text-app-muted uppercase tracking-wider mb-3">{t("licenseStatus")}</h3>
         <div className="p-4 rounded-lg border border-neutral-700/50 bg-neutral-800/40">
           {isPro ? (
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <span className="w-2 h-2 rounded-full bg-green-500" />
                 <span className="text-sm font-medium text-app">
-                  Sidewinder Pro
+                  {t("pro")}
                 </span>
               </div>
               {isElysiumUnlock ? (
@@ -1005,7 +1009,7 @@ function AccountTab({ localLicense, setLocalLicense }: {
               <div className="flex items-center gap-2 mb-2">
                 <span className="w-2 h-2 rounded-full bg-neutral-500" />
                 <span className="text-sm font-medium text-app">
-                  Free Plan
+                  {t("freePlan")}
                 </span>
               </div>
               <p className="text-xs text-app-muted">
@@ -1020,7 +1024,7 @@ function AccountTab({ localLicense, setLocalLicense }: {
         <>
           {/* Purchase */}
           <div>
-            <h3 className="text-xs font-semibold text-app-muted uppercase tracking-wider mb-3">Upgrade to Pro</h3>
+            <h3 className="text-xs font-semibold text-app-muted uppercase tracking-wider mb-3">{t("upgradeToPro")}</h3>
             <div className="p-4 rounded-lg border border-neutral-700/50 bg-neutral-800/40 space-y-3">
               <div className="flex items-baseline justify-between">
                 <span className="text-lg font-bold text-app">$4.99</span>
@@ -1052,7 +1056,7 @@ function AccountTab({ localLicense, setLocalLicense }: {
                   setTimeout(() => useStore.getState().setBlurSuppressed(false), 1000);
                 }}
               >
-                Purchase — $4.99
+                {t("purchase")} — $4.99
               </button>
               <p className="text-[10px] text-app-faint text-center">
                 Secure payment via Stripe · Instant license key delivery
@@ -1062,7 +1066,7 @@ function AccountTab({ localLicense, setLocalLicense }: {
 
           {/* License key */}
           <div>
-            <h3 className="text-xs font-semibold text-app-muted uppercase tracking-wider mb-3">Have a License Key?</h3>
+            <h3 className="text-xs font-semibold text-app-muted uppercase tracking-wider mb-3">{t("licenseKey")}</h3>
             <div className="flex gap-2">
               <input
                 value={keyInput}
@@ -1077,7 +1081,7 @@ function AccountTab({ localLicense, setLocalLicense }: {
                 className="px-3 py-1.5 bg-neutral-700 hover:bg-neutral-600 rounded text-sm
                            text-app-muted transition-colors cursor-pointer"
               >
-                Activate
+                {t("activate")}
               </button>
             </div>
             {keyError && <p className="text-xs text-red-400 mt-1">{keyError}</p>}

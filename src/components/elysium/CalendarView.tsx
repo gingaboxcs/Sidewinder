@@ -3,28 +3,29 @@ import { listen } from "@tauri-apps/api/event";
 import { useStore } from "../../stores/store";
 import { loadElysiumItems, openInElysium } from "../../lib/tauri";
 import { getItemIcon } from "./ElysiumIcons";
+import { t } from "../../lib/i18n";
 import type { ElysiumItem } from "../../types";
 
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MONTHS = ["January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"];
+const getDays = () => [t("sun"), t("mon"), t("tue"), t("wed"), t("thu"), t("fri"), t("sat")];
+const getMonths = () => [t("january"), t("february"), t("march"), t("april"), t("may"), t("june"),
+  t("july"), t("august"), t("september"), t("october"), t("november"), t("december")];
 
-const TYPE_LABELS: Record<string, string> = {
-  event: "Event",
-  appointment: "Appointment",
-  task: "Task",
-  goal: "Goal",
-  habit: "Habit",
-  reminder: "Reminder",
-  project: "Project",
-};
+const getTypeLabels = (): Record<string, string> => ({
+  event: t("event"),
+  appointment: t("appointment"),
+  task: t("task"),
+  goal: t("goal"),
+  habit: t("habit"),
+  reminder: t("reminder"),
+  project: t("project"),
+});
 
-const STATUS_LABELS: Record<string, string> = {
-  todo: "To Do",
-  in_progress: "In Progress",
-  done: "Done",
-  cancelled: "Cancelled",
-};
+const getStatusLabels = (): Record<string, string> => ({
+  todo: t("toDo"),
+  in_progress: t("inProgress"),
+  done: t("done"),
+  cancelled: t("cancelled"),
+});
 
 export function CalendarView() {
   const elysiumConfig = useStore((s) => s.elysiumConfig);
@@ -102,8 +103,8 @@ export function CalendarView() {
           </svg>
         </button>
         <div className="text-center">
-          <span className="text-sm font-semibold text-app">{MONTHS[month]} {year}</span>
-          <button onClick={goToday} className="ml-2 text-[10px] text-app-faint hover:text-app cursor-pointer">Today</button>
+          <span className="text-sm font-semibold text-app">{getMonths()[month]} {year}</span>
+          <button onClick={goToday} className="ml-2 text-[10px] text-app-faint hover:text-app cursor-pointer">{t("today")}</button>
         </div>
         <button onClick={nextMonth} className="p-1 text-app-muted hover:text-app cursor-pointer">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -114,7 +115,7 @@ export function CalendarView() {
 
       {/* Day headers */}
       <div className="grid grid-cols-7 gap-px text-center">
-        {DAYS.map((d) => (
+        {getDays().map((d) => (
           <div key={d} className="text-[10px] text-app-faint font-medium py-1">{d}</div>
         ))}
       </div>
@@ -174,13 +175,13 @@ export function CalendarView() {
 function ItemCard({ item, expanded, onToggle }: {
   item: ElysiumItem; expanded: boolean; onToggle: () => void;
 }) {
-  const typeLabel = TYPE_LABELS[item.type] || item.type;
+  const typeLabel = getTypeLabels()[item.type] || item.type;
 
   return (
     <div className="rounded-lg border border-neutral-700/50 overflow-hidden">
       <div
         onClick={onToggle}
-        className="flex items-start gap-2 px-2.5 py-2 bg-neutral-800/40 hover:bg-neutral-800/80 cursor-pointer transition-colors"
+        className="flex items-start gap-2 px-2.5 py-2 bg-neutral-800/70 hover:bg-neutral-800/90 cursor-pointer transition-colors"
       >
         <span className="shrink-0 mt-0.5">{getItemIcon(item.type, item.kind, 16)}</span>
         <div className="flex-1 min-w-0">
@@ -193,7 +194,7 @@ function ItemCard({ item, expanded, onToggle }: {
             {item.time && <span className="text-[10px] text-app-faint">{formatTime(item.time)}</span>}
             {item.status && (
               <span className="text-[10px] px-1 rounded bg-neutral-700/40 text-app-faint">
-                {STATUS_LABELS[item.status] || item.status}
+                {getStatusLabels()[item.status] || item.status}
               </span>
             )}
             {item.allDay && <span className="text-[10px] text-app-faint">All day</span>}
@@ -207,7 +208,7 @@ function ItemCard({ item, expanded, onToggle }: {
           <button
             onClick={(e) => { e.stopPropagation(); openInElysium(item.type, item.id); }}
             className="text-app-faint hover:text-app cursor-pointer p-0.5"
-            title="Open in Elysium"
+            title={t("openInElysium")}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -248,7 +249,7 @@ function ItemCard({ item, expanded, onToggle }: {
           {/* Progress */}
           {item.progress != null && (
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-app-faint w-16 shrink-0">Progress</span>
+              <span className="text-[10px] text-app-faint w-16 shrink-0">{t("progress")}</span>
               <div className="flex-1 h-1.5 bg-neutral-700 rounded-full overflow-hidden">
                 <div className="h-full rounded-full" style={{ width: `${(item.progress * 100)}%`, backgroundColor: "var(--accent)" }} />
               </div>
@@ -293,7 +294,7 @@ function ItemCard({ item, expanded, onToggle }: {
           {/* Tags */}
           {item.tags.length > 0 && (
             <div className="flex items-start gap-2">
-              <span className="text-[10px] text-app-faint w-16 shrink-0 mt-0.5">Tags</span>
+              <span className="text-[10px] text-app-faint w-16 shrink-0 mt-0.5">{t("tags")}</span>
               <div className="flex flex-wrap gap-1">
                 {item.tags.map((tag) => (
                   <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-700/40 text-app-faint">{tag}</span>
@@ -305,7 +306,7 @@ function ItemCard({ item, expanded, onToggle }: {
           {/* Links */}
           {item.links.length > 0 && (
             <div className="flex items-start gap-2">
-              <span className="text-[10px] text-app-faint w-16 shrink-0 mt-0.5">Links</span>
+              <span className="text-[10px] text-app-faint w-16 shrink-0 mt-0.5">{t("links")}</span>
               <div className="space-y-0.5">
                 {item.links.map((link, i) => (
                   <p key={i} className="text-[10px] text-app-faint truncate">

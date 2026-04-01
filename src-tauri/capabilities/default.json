@@ -18,6 +18,8 @@
     "opener:default",
     "dialog:default",
     "autostart:default",
-    "global-shortcut:default"
+    "global-shortcut:default",
+    "updater:default",
+    "process:default"
   ]
 }

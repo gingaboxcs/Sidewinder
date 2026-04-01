@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { loadConfig, saveConfig } from "../../lib/tauri";
+import { t } from "../../lib/i18n";
 
 interface Props {
   onComplete: () => void;
@@ -7,8 +8,8 @@ interface Props {
 
 const steps = [
   {
-    title: "Welcome to Sidewinder",
-    description: "Your notes, always within reach. Sidewinder hides at the edge of your screen until you need it.",
+    title: t("welcome"),
+    description: t("welcomeDesc"),
     icon: (
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-app">
         <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
@@ -19,8 +20,8 @@ const steps = [
     detail: "Look for the small handle at the edge of your screen. Click it to slide the panel open, click again to hide it.",
   },
   {
-    title: "Vaults & Notes",
-    description: "Organize your notes in vaults — each vault points to a folder on your computer.",
+    title: t("vaultsAndNotes"),
+    description: t("vaultsDesc"),
     icon: (
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-app">
         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
@@ -29,8 +30,8 @@ const steps = [
     detail: "Add any folder as a vault — including Obsidian vaults. All .md files inside appear as notes. Create subfolders to organize further.",
   },
   {
-    title: "Three View Modes",
-    description: "Choose how your notes are displayed. Set per-vault, per-folder, or per-note.",
+    title: t("threeViewModes"),
+    description: t("viewModesDesc"),
     icon: (
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-app">
         <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" />
@@ -40,8 +41,8 @@ const steps = [
     detail: "Accordion (A) — expand/collapse individually. Full (F) — one note at a time. Always Open (O) — all notes visible. Click the badges to cycle.",
   },
   {
-    title: "Keyboard Shortcuts",
-    description: "Work faster with shortcuts. Customize them all in Settings.",
+    title: t("shortcutsTitle"),
+    description: t("shortcutsDesc"),
     icon: (
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-app">
         <rect x="2" y="4" width="20" height="16" rx="2" />
@@ -108,14 +109,14 @@ export function Onboarding({ onComplete }: Props) {
             onClick={() => setStep(step - 1)}
             className="text-sm text-app-muted hover:text-app cursor-pointer transition-colors"
           >
-            Back
+            {t("back")}
           </button>
         ) : (
           <button
             onClick={handleComplete}
             className="text-sm text-app-faint hover:text-app cursor-pointer transition-colors"
           >
-            Skip
+            {t("skip")}
           </button>
         )}
 
@@ -124,7 +125,7 @@ export function Onboarding({ onComplete }: Props) {
           style={{ backgroundColor: "var(--accent)" }}
           className="px-5 py-2 rounded-lg text-sm font-medium text-white cursor-pointer transition-colors hover:opacity-90"
         >
-          {isLast ? "Get Started" : "Next"}
+          {isLast ? t("getStarted") : t("next")}
         </button>
       </div>
     </div>
