@@ -26,6 +26,16 @@ pub fn run() {
                 app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             }
 
+            // Make window transparent on Windows and hide from taskbar
+            #[cfg(target_os = "windows")]
+            {
+                let window = app.get_webview_window("main").unwrap();
+                // Transparent background (equivalent of macOS transparent window)
+                let _ = window_vibrancy::apply_acrylic(&window, Some((0, 0, 0, 0)));
+                // Ensure window is hidden from alt-tab and taskbar
+                let _ = window.set_skip_taskbar(true);
+            }
+
             // Manage watcher state
             app.manage(watcher::WatcherState {
                 active_path: Mutex::new(None),
