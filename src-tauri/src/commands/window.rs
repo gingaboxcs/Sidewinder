@@ -133,8 +133,8 @@ fn get_usable_screen(window: &tauri::WebviewWindow, follow_active: bool) -> Resu
 }
 
 /// Geometry for the window at hidden and shown states.
-/// For left/right edges: window is full size, position changes.
-/// For top/bottom edges: window resizes between handle-only and full size (macOS clamps vertical position).
+/// macOS left/right: window is full size, position changes (transparent areas invisible).
+/// macOS top/bottom + ALL Windows edges: window resizes between handle-only and full size.
 struct Geometry {
     /// Full window size (handle + panel)
     w: f64,
@@ -146,6 +146,16 @@ struct Geometry {
     hidden_y: f64,
     shown_x: f64,
     shown_y: f64,
+}
+
+/// Whether to use the resize approach (vs position-only) for sliding.
+/// Windows always needs resize (no transparent window support).
+/// macOS needs resize for top/bottom (OS clamps vertical position).
+fn needs_resize(edge: &Edge) -> bool {
+    #[cfg(target_os = "windows")]
+    { return true; }
+    #[cfg(not(target_os = "windows"))]
+    { matches!(edge, Edge::Top | Edge::Bottom) }
 }
 
 fn compute_geometry(cfg: &WindowConfig, area: &ScreenArea) -> Geometry {
@@ -165,13 +175,29 @@ fn compute_geometry(cfg: &WindowConfig, area: &ScreenArea) -> Geometry {
                 Alignment::End => area.h - h,
             };
 
-            let (hidden_x, shown_x) = match cfg.edge {
-                Edge::Right => (area.x + area.w - thickness, area.x + area.w - w),
-                Edge::Left => (area.x - panel_w, area.x),
-                _ => unreachable!(),
-            };
-
-            Geometry { w, h, hidden_w: w, hidden_h: h, hidden_x, hidden_y: align_y, shown_x, shown_y: align_y }
+            if needs_resize(&cfg.edge) {
+                // Resize approach: hidden = handle only, shown = full window
+                let (hidden_x, shown_x) = match cfg.edge {
+                    Edge::Right => (area.x + area.w - thickness, area.x + area.w - w),
+                    Edge::Left => (area.x, area.x),
+                    _ => unreachable!(),
+                };
+                // For hidden state, align using handle length instead of panel height
+                let hidden_align_y = area.y + match cfg.alignment {
+                    Alignment::Start => 0.0,
+                    Alignment::Center => (area.h - length) / 2.0,
+                    Alignment::End => area.h - length,
+                };
+                Geometry { w, h, hidden_w: thickness, hidden_h: length, hidden_x, hidden_y: hidden_align_y, shown_x, shown_y: align_y }
+            } else {
+                // Position-only approach (macOS left/right): full size, slide on/off screen
+                let (hidden_x, shown_x) = match cfg.edge {
+                    Edge::Right => (area.x + area.w - thickness, area.x + area.w - w),
+                    Edge::Left => (area.x - panel_w, area.x),
+                    _ => unreachable!(),
+                };
+                Geometry { w, h, hidden_w: w, hidden_h: h, hidden_x, hidden_y: align_y, shown_x, shown_y: align_y }
+            }
         }
         Edge::Top | Edge::Bottom => {
             let w = panel_w.max(length);
@@ -213,7 +239,7 @@ pub async fn slide_window(app: AppHandle, visible: bool) -> Result<(), String> {
     let delay = cfg.animation_delay as u64;
     let duration = cfg.animation_duration as u64;
 
-    let needs_resize = matches!(cfg.edge, Edge::Top | Edge::Bottom);
+    let resize = needs_resize(&cfg.edge);
 
     let (start_x, start_y, end_x, end_y) = if visible {
         (geo.hidden_x, geo.hidden_y, geo.shown_x, geo.shown_y)
@@ -221,7 +247,7 @@ pub async fn slide_window(app: AppHandle, visible: bool) -> Result<(), String> {
         (geo.shown_x, geo.shown_y, geo.hidden_x, geo.hidden_y)
     };
 
-    let (start_w, start_h, end_w, end_h) = if needs_resize {
+    let (start_w, start_h, end_w, end_h) = if resize {
         if visible {
             (geo.hidden_w, geo.hidden_h, geo.w, geo.h)
         } else {
@@ -242,7 +268,7 @@ pub async fn slide_window(app: AppHandle, visible: bool) -> Result<(), String> {
     }
 
     if duration == 0 {
-        if needs_resize {
+        if resize {
             window.set_size(tauri::LogicalSize::new(end_w, end_h)).map_err(|e| e.to_string())?;
         }
         window.set_position(tauri::LogicalPosition::new(end_x, end_y)).map_err(|e| e.to_string())?;
@@ -257,7 +283,7 @@ pub async fn slide_window(app: AppHandle, visible: bool) -> Result<(), String> {
             let x = start_x + (end_x - start_x) * eased;
             let y = start_y + (end_y - start_y) * eased;
 
-            if needs_resize {
+            if resize {
                 let w = start_w + (end_w - start_w) * eased;
                 let h = start_h + (end_h - start_h) * eased;
                 window.set_size(tauri::LogicalSize::new(w, h)).map_err(|e| e.to_string())?;
@@ -267,7 +293,7 @@ pub async fn slide_window(app: AppHandle, visible: bool) -> Result<(), String> {
         }
 
         // Ensure exact final state
-        if needs_resize {
+        if resize {
             window.set_size(tauri::LogicalSize::new(end_w, end_h)).map_err(|e| e.to_string())?;
         }
         window.set_position(tauri::LogicalPosition::new(end_x, end_y)).map_err(|e| e.to_string())?;
