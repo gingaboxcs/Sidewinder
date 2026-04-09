@@ -26,14 +26,17 @@ pub fn run() {
                 app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             }
 
-            // Make window transparent on Windows and hide from taskbar
+            // Fix transparent window on Windows and hide from taskbar
             #[cfg(target_os = "windows")]
             {
                 let window = app.get_webview_window("main").unwrap();
-                // Transparent background (equivalent of macOS transparent window)
-                let _ = window_vibrancy::apply_acrylic(&window, Some((0, 0, 0, 0)));
-                // Ensure window is hidden from alt-tab and taskbar
                 let _ = window.set_skip_taskbar(true);
+                // Workaround: resize the window slightly to trigger WebView2 transparency
+                // (WebView2 sometimes shows a solid background until resized)
+                if let Ok(size) = window.outer_size() {
+                    let _ = window.set_size(tauri::PhysicalSize::new(size.width + 1, size.height));
+                    let _ = window.set_size(size);
+                }
             }
 
             // Manage watcher state
