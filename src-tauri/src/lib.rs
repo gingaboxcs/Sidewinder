@@ -26,16 +26,35 @@ pub fn run() {
                 app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             }
 
-            // Fix transparent window on Windows and hide from taskbar
+            // Windows: hide from taskbar and remove drop shadow
             #[cfg(target_os = "windows")]
             {
                 let window = app.get_webview_window("main").unwrap();
                 let _ = window.set_skip_taskbar(true);
-                // Workaround: resize the window slightly to trigger WebView2 transparency
-                // (WebView2 sometimes shows a solid background until resized)
-                if let Ok(size) = window.outer_size() {
-                    let _ = window.set_size(tauri::PhysicalSize::new(size.width + 1, size.height));
-                    let _ = window.set_size(size);
+
+                // Remove the window drop shadow
+                if let Ok(hwnd) = window.hwnd() {
+                    use windows_sys::Win32::Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_NCRENDERING_POLICY, DWMNCRENDERINGPOLICY};
+                    let policy = 1u32; // DWMNCRP_DISABLED
+                    unsafe {
+                        DwmSetWindowAttribute(
+                            hwnd.0 as _,
+                            DWMWA_NCRENDERING_POLICY,
+                            &policy as *const _ as *const _,
+                            std::mem::size_of::<u32>() as u32,
+                        );
+                    }
+
+                    // Also try setting DWMWA_WINDOW_CORNER_PREFERENCE to no rounding
+                    let corner_pref = 1u32; // DWMWCP_DONOTROUND
+                    unsafe {
+                        DwmSetWindowAttribute(
+                            hwnd.0 as _,
+                            33, // DWMWA_WINDOW_CORNER_PREFERENCE
+                            &corner_pref as *const _ as *const _,
+                            std::mem::size_of::<u32>() as u32,
+                        );
+                    }
                 }
             }
 

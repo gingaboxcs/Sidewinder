@@ -74,19 +74,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 
-  // On Windows: no transparent areas, use panel color as window background
-  const windowBg = isWindows ? panelColor : "transparent";
+  // On Windows: no transparent areas, no handle when open (window resizes to panel only)
+  if (isWindows) {
+    if (isSlid) {
+      return (
+        <div className="flex flex-col h-screen w-screen overflow-hidden" style={{ backgroundColor: panelColor }}>
+          {panel}
+        </div>
+      );
+    }
+    // Hidden state handled above (handle-only return)
+    return null;
+  }
 
   if (isHorizontal) {
     return (
-      <div className="flex flex-col h-screen w-screen overflow-hidden" style={{ backgroundColor: windowBg }}>
+      <div className="flex flex-col h-screen w-screen overflow-hidden bg-transparent">
         {edge === "top" ? <>{panel}{handle}</> : <>{handle}{panel}</>}
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden" style={{ backgroundColor: windowBg }}>
+    <div className="flex h-screen w-screen overflow-hidden bg-transparent">
       {edge === "left" ? <>{panel}{handle}</> : <>{handle}{panel}</>}
     </div>
   );

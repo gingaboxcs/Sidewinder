@@ -7,7 +7,7 @@ import type { Edge, Alignment, EditMode, InsertPosition, WindowConfig, LicenseCo
 import { useLicense } from "../../hooks/useLicense";
 import { supportedLanguages, setLanguage, getLanguage, t } from "../../lib/i18n";
 
-type SettingsTab = "general" | "appearance" | "creation" | "integration" | "shortcuts" | "account";
+type SettingsTab = "general" | "appearance" | "creation" | "integration" | "shortcuts" | "account" | "about";
 
 export function Settings() {
   const windowConfig = useStore((s) => s.windowConfig);
@@ -69,6 +69,7 @@ export function Settings() {
     { id: "integration", label: t("integration") },
     { id: "shortcuts", label: t("shortcuts") },
     { id: "account", label: t("account") },
+    { id: "about", label: t("about") },
   ];
 
   return (
@@ -111,6 +112,9 @@ export function Settings() {
         )}
         {activeTab === "account" && (
           <AccountTab localLicense={localLicense} setLocalLicense={setLocalLicense} />
+        )}
+        {activeTab === "about" && (
+          <AboutTab />
         )}
       </div>
 
@@ -1203,5 +1207,147 @@ function PositionPreview({ config }: { config: WindowConfig }) {
       <div style={panelStyle} />
       <div style={handleStyle} />
     </div>
+  );
+}
+
+// ─── About Tab ───────────────────────────────────────────────────────────────
+
+function AboutTab() {
+  const [updateState, setUpdateState] = useState<"idle" | "checking" | "available" | "uptodate" | "updating" | "error">("idle");
+  const [updateVersion, setUpdateVersion] = useState("");
+
+  const checkForUpdates = async () => {
+    setUpdateState("checking");
+    try {
+      const { check } = await import("@tauri-apps/plugin-updater");
+      const update = await check();
+      if (update) {
+        setUpdateVersion(update.version);
+        setUpdateState("available");
+      } else {
+        setUpdateState("uptodate");
+      }
+    } catch {
+      setUpdateState("error");
+    }
+  };
+
+  const doUpdate = async () => {
+    setUpdateState("updating");
+    try {
+      const { check } = await import("@tauri-apps/plugin-updater");
+      const { relaunch } = await import("@tauri-apps/plugin-process");
+      const update = await check();
+      if (update) {
+        await update.downloadAndInstall();
+        await relaunch();
+      }
+    } catch {
+      setUpdateState("error");
+    }
+  };
+
+  return (
+    <>
+      {/* App Info */}
+      <div className="text-center py-4">
+        <h3 className="text-lg font-bold text-app">Sidewinder</h3>
+        <p className="text-xs text-app-muted mt-1">{t("version")} {__APP_VERSION__}</p>
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex justify-between text-sm">
+          <span className="text-app-muted">{t("developer")}</span>
+          <span className="text-app">Black Dog Studios</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span className="text-app-muted">{t("website")}</span>
+          <a
+            href="https://blackdogstudios.io"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline"
+            style={{ color: "var(--accent)" }}
+          >
+            blackdogstudios.io
+          </a>
+        </div>
+      </div>
+
+      {/* Update Check */}
+      <div className="mt-6 p-4 rounded-lg bg-neutral-800/60 border border-neutral-700/50">
+        <div className="flex items-center justify-between">
+          <div>
+            {updateState === "uptodate" && (
+              <p className="text-sm text-green-400">{t("upToDate")}</p>
+            )}
+            {updateState === "available" && (
+              <p className="text-sm text-app">
+                {t("updateAvailable")}: <span className="font-semibold">v{updateVersion}</span>
+              </p>
+            )}
+            {updateState === "checking" && (
+              <p className="text-sm text-app-muted">{t("checkForUpdates")}...</p>
+            )}
+            {updateState === "updating" && (
+              <p className="text-sm text-app-muted">{t("updating")}</p>
+            )}
+            {updateState === "error" && (
+              <p className="text-sm text-red-400">Update check failed</p>
+            )}
+            {updateState === "idle" && (
+              <p className="text-sm text-app-muted">{t("version")} {__APP_VERSION__}</p>
+            )}
+          </div>
+          {updateState === "available" ? (
+            <button
+              onClick={doUpdate}
+              style={{ backgroundColor: "var(--accent)" }}
+              className="text-xs px-3 py-1.5 rounded text-white cursor-pointer"
+            >
+              {t("updating") === t("updating") ? "Update" : t("updating")}
+            </button>
+          ) : updateState !== "updating" && updateState !== "checking" ? (
+            <button
+              onClick={checkForUpdates}
+              className="text-xs px-3 py-1.5 rounded bg-neutral-700 text-app-muted hover:bg-neutral-600 hover:text-app cursor-pointer transition-colors"
+            >
+              {t("checkForUpdates")}
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      {/* More Apps */}
+      <div className="mt-6">
+        <h4 className="text-xs text-app-muted uppercase tracking-wider mb-3">{t("moreApps")}</h4>
+        <div className="space-y-2">
+          <a
+            href="https://elysium.is"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 p-3 rounded-lg bg-neutral-800/60 border border-neutral-700/50 hover:bg-neutral-800 transition-colors"
+          >
+            <div className="w-8 h-8 rounded-lg bg-neutral-700 flex items-center justify-center text-sm">E</div>
+            <div>
+              <p className="text-sm font-medium text-app">Elysium</p>
+              <p className="text-[10px] text-app-faint">Life management & scheduling</p>
+            </div>
+          </a>
+          <a
+            href="https://blackdogstudios.io/apps"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 p-3 rounded-lg bg-neutral-800/60 border border-neutral-700/50 hover:bg-neutral-800 transition-colors"
+          >
+            <div className="w-8 h-8 rounded-lg bg-neutral-700 flex items-center justify-center text-sm">+</div>
+            <div>
+              <p className="text-sm font-medium text-app">All Apps</p>
+              <p className="text-[10px] text-app-faint">See all Black Dog Studios apps</p>
+            </div>
+          </a>
+        </div>
+      </div>
+    </>
   );
 }

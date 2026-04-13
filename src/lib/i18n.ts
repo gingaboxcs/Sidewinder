@@ -107,6 +107,15 @@ export interface Translations {
   integration: string;
   shortcuts: string;
   account: string;
+  about: string;
+  version: string;
+  developer: string;
+  website: string;
+  checkForUpdates: string;
+  upToDate: string;
+  updateAvailable: string;
+  updating: string;
+  moreApps: string;
 
   // Settings - General
   screenEdge: string;
@@ -357,6 +366,15 @@ const en: Translations = {
   integration: "Integration",
   shortcuts: "Shortcuts",
   account: "Account",
+  about: "About",
+  version: "Version",
+  developer: "Developer",
+  website: "Website",
+  checkForUpdates: "Check for Updates",
+  upToDate: "You're up to date!",
+  updateAvailable: "Update available",
+  updating: "Updating...",
+  moreApps: "More Apps",
 
   screenEdge: "Screen Edge",
   alignment: "Alignment",
