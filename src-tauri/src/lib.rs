@@ -26,11 +26,27 @@ pub fn run() {
                 app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             }
 
-            // Windows: hide from taskbar
+            // Windows: hide from taskbar and disable shadow
             #[cfg(target_os = "windows")]
             {
                 let window = app.get_webview_window("main").unwrap();
                 let _ = window.set_skip_taskbar(true);
+                // Disable shadow by removing WS_EX_APPWINDOW and adding WS_EX_TOOLWINDOW
+                if let Ok(hwnd) = window.hwnd() {
+                    use windows_sys::Win32::UI::WindowsAndMessaging::*;
+                    let hwnd = hwnd.0 as isize;
+                    unsafe {
+                        let ex_style = GetWindowLongW(hwnd, GWL_EXSTYLE);
+                        SetWindowLongW(
+                            hwnd,
+                            GWL_EXSTYLE,
+                            (ex_style | WS_EX_TOOLWINDOW as i32 | WS_EX_NOACTIVATE as i32) & !(WS_EX_APPWINDOW as i32),
+                        );
+                        // Force the window to update its style
+                        SetWindowPos(hwnd, 0, 0, 0, 0, 0,
+                            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+                    }
+                }
             }
 
             // Manage watcher state
