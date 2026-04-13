@@ -4,20 +4,37 @@ import { useStore } from "../../stores/store";
 import { quitApp } from "../../lib/tauri";
 import { t } from "../../lib/i18n";
 
+// Detect Windows — on Windows we use resize approach so no transparent areas exist
+const isWindows = navigator.userAgent.includes("Windows");
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const isSlid = useStore((s) => s.isSlid);
   const edge = useStore((s) => s.windowConfig.edge);
   const panelColor = useStore((s) => s.windowConfig.panelColor);
+  const handleColor = useStore((s) => s.windowConfig.handleColor);
   const view = useStore((s) => s.view);
 
   const isHorizontal = edge === "top" || edge === "bottom";
 
-  const roundingClass = {
+  const roundingClass = isWindows ? "" : {
     right: "rounded-l-lg",
     left: "rounded-r-lg",
     top: "rounded-b-lg",
     bottom: "rounded-t-lg",
   }[edge];
+
+  // On Windows with resize approach: when hidden, window IS the handle.
+  // No transparent areas, no panel div needed.
+  if (isWindows && !isSlid) {
+    return (
+      <div
+        className="flex h-screen w-screen items-center justify-center overflow-hidden"
+        style={{ backgroundColor: handleColor }}
+      >
+        <SlideTab />
+      </div>
+    );
+  }
 
   const panelStyle: React.CSSProperties = {
     backgroundColor: isSlid ? panelColor : "transparent",
@@ -57,16 +74,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 
+  // On Windows: no transparent areas, use panel color as window background
+  const windowBg = isWindows ? panelColor : "transparent";
+
   if (isHorizontal) {
     return (
-      <div className="flex flex-col h-screen w-screen overflow-hidden bg-transparent">
+      <div className="flex flex-col h-screen w-screen overflow-hidden" style={{ backgroundColor: windowBg }}>
         {edge === "top" ? <>{panel}{handle}</> : <>{handle}{panel}</>}
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-transparent">
+    <div className="flex h-screen w-screen overflow-hidden" style={{ backgroundColor: windowBg }}>
       {edge === "left" ? <>{panel}{handle}</> : <>{handle}{panel}</>}
     </div>
   );
