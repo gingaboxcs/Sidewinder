@@ -32,24 +32,27 @@ pub fn run() {
                 let window = app.get_webview_window("main").unwrap();
                 let _ = window.set_skip_taskbar(true);
 
-                // Remove the window drop shadow
+                // Remove the window drop shadow and rounded corners
                 if let Ok(hwnd) = window.hwnd() {
-                    use windows_sys::Win32::Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_NCRENDERING_POLICY, DWMNCRENDERINGPOLICY};
+                    use windows_sys::Win32::Graphics::Dwm::DwmSetWindowAttribute;
+                    let hwnd = hwnd.0 as isize;
+
+                    // Disable non-client rendering (removes shadow)
                     let policy = 1u32; // DWMNCRP_DISABLED
                     unsafe {
                         DwmSetWindowAttribute(
-                            hwnd.0 as _,
-                            DWMWA_NCRENDERING_POLICY,
+                            hwnd,
+                            6, // DWMWA_NCRENDERING_POLICY
                             &policy as *const _ as *const _,
                             std::mem::size_of::<u32>() as u32,
                         );
                     }
 
-                    // Also try setting DWMWA_WINDOW_CORNER_PREFERENCE to no rounding
+                    // Disable rounded corners (Windows 11)
                     let corner_pref = 1u32; // DWMWCP_DONOTROUND
                     unsafe {
                         DwmSetWindowAttribute(
-                            hwnd.0 as _,
+                            hwnd,
                             33, // DWMWA_WINDOW_CORNER_PREFERENCE
                             &corner_pref as *const _ as *const _,
                             std::mem::size_of::<u32>() as u32,
