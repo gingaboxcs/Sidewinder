@@ -35,14 +35,15 @@ pub fn run() {
                 // Remove the window drop shadow and rounded corners
                 if let Ok(hwnd) = window.hwnd() {
                     use windows_sys::Win32::Graphics::Dwm::DwmSetWindowAttribute;
-                    let hwnd = hwnd.0 as isize;
+                    use windows_sys::Win32::Foundation::HWND;
+                    let h: HWND = hwnd.0 as HWND;
 
                     // Disable non-client rendering (removes shadow)
                     let policy = 1u32; // DWMNCRP_DISABLED
                     unsafe {
                         DwmSetWindowAttribute(
-                            hwnd,
-                            6, // DWMWA_NCRENDERING_POLICY
+                            h,
+                            6u32, // DWMWA_NCRENDERING_POLICY
                             &policy as *const _ as *const _,
                             std::mem::size_of::<u32>() as u32,
                         );
@@ -52,8 +53,8 @@ pub fn run() {
                     let corner_pref = 1u32; // DWMWCP_DONOTROUND
                     unsafe {
                         DwmSetWindowAttribute(
-                            hwnd,
-                            33, // DWMWA_WINDOW_CORNER_PREFERENCE
+                            h,
+                            33u32, // DWMWA_WINDOW_CORNER_PREFERENCE
                             &corner_pref as *const _ as *const _,
                             std::mem::size_of::<u32>() as u32,
                         );
