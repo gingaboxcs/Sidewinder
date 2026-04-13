@@ -26,40 +26,11 @@ pub fn run() {
                 app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             }
 
-            // Windows: hide from taskbar and remove drop shadow
+            // Windows: hide from taskbar
             #[cfg(target_os = "windows")]
             {
                 let window = app.get_webview_window("main").unwrap();
                 let _ = window.set_skip_taskbar(true);
-
-                // Remove the window drop shadow and rounded corners
-                if let Ok(hwnd) = window.hwnd() {
-                    use windows_sys::Win32::Graphics::Dwm::DwmSetWindowAttribute;
-                    use windows_sys::Win32::Foundation::HWND;
-                    let h: HWND = hwnd.0 as HWND;
-
-                    // Disable non-client rendering (removes shadow)
-                    let policy = 1u32; // DWMNCRP_DISABLED
-                    unsafe {
-                        DwmSetWindowAttribute(
-                            h,
-                            6u32, // DWMWA_NCRENDERING_POLICY
-                            &policy as *const _ as *const _,
-                            std::mem::size_of::<u32>() as u32,
-                        );
-                    }
-
-                    // Disable rounded corners (Windows 11)
-                    let corner_pref = 1u32; // DWMWCP_DONOTROUND
-                    unsafe {
-                        DwmSetWindowAttribute(
-                            h,
-                            33u32, // DWMWA_WINDOW_CORNER_PREFERENCE
-                            &corner_pref as *const _ as *const _,
-                            std::mem::size_of::<u32>() as u32,
-                        );
-                    }
-                }
             }
 
             // Manage watcher state

@@ -149,13 +149,13 @@ struct Geometry {
 }
 
 /// Whether to use the resize approach (vs position-only) for sliding.
-/// Windows always needs resize (no transparent window support).
 /// macOS needs resize for top/bottom (OS clamps vertical position).
+/// Windows can position off-screen on all edges.
 fn needs_resize(edge: &Edge) -> bool {
-    #[cfg(target_os = "windows")]
-    { return true; }
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "macos")]
     { matches!(edge, Edge::Top | Edge::Bottom) }
+    #[cfg(not(target_os = "macos"))]
+    { false }
 }
 
 fn compute_geometry(cfg: &WindowConfig, area: &ScreenArea) -> Geometry {
