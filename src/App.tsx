@@ -105,6 +105,8 @@ function App() {
 
   useEffect(() => {
     const root = document.documentElement;
+    // Set platform for CSS (Windows needs opaque backgrounds, macOS uses transparency)
+    if (navigator.userAgent.includes("Windows")) root.setAttribute("data-platform", "windows");
     root.style.setProperty("--accent", windowConfig.accentColor);
     root.style.setProperty("--text-color", windowConfig.textColor);
     root.style.setProperty("--font-family", windowConfig.fontFamily === "System" ? "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" : windowConfig.fontFamily);

@@ -50,6 +50,13 @@ html, body, #root {
   padding: 0;
 }
 
+/* Windows: opaque background (no transparent window support) */
+[data-platform="windows"],
+[data-platform="windows"] body,
+[data-platform="windows"] #root {
+  background: #000000 !important;
+}
+
 /* Range slider accent */
 input[type="range"] {
   accent-color: var(--accent);
