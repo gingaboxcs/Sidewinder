@@ -35,4 +35,4 @@ objc2 = "0.6"
 plist = "1.8"
 
 [target.'cfg(target_os = "windows")'.dependencies]
-windows-sys = { version = "0.59", features = ["Win32_UI_WindowsAndMessaging", "Win32_Foundation"] }
+windows-sys = { version = "0.59", features = ["Win32_UI_WindowsAndMessaging", "Win32_Foundation", "Win32_Graphics_Dwm", "Win32_Graphics_Gdi"] }

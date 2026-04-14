@@ -26,23 +26,39 @@ pub fn run() {
                 app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             }
 
-            // Windows: hide from taskbar and disable shadow
+            // Windows: hide from taskbar and remove shadow completely
             #[cfg(target_os = "windows")]
             {
                 let window = app.get_webview_window("main").unwrap();
                 let _ = window.set_skip_taskbar(true);
-                // Disable shadow by removing WS_EX_APPWINDOW and adding WS_EX_TOOLWINDOW
+
                 if let Ok(hwnd) = window.hwnd() {
-                    use windows_sys::Win32::UI::WindowsAndMessaging::*;
                     let h = hwnd.0 as *mut std::ffi::c_void;
                     unsafe {
+                        // Set WS_EX_TOOLWINDOW to hide from alt-tab
+                        use windows_sys::Win32::UI::WindowsAndMessaging::*;
                         let ex_style = GetWindowLongW(h, GWL_EXSTYLE);
                         SetWindowLongW(
                             h,
                             GWL_EXSTYLE,
-                            (ex_style | WS_EX_TOOLWINDOW as i32 | WS_EX_NOACTIVATE as i32) & !(WS_EX_APPWINDOW as i32),
+                            (ex_style | WS_EX_TOOLWINDOW as i32) & !(WS_EX_APPWINDOW as i32),
                         );
-                        // Force the window to update its style
+
+                        // Remove shadow by setting DWM margins to 0
+                        use windows_sys::Win32::Graphics::Dwm::DwmExtendFrameIntoClientArea;
+                        let margins = windows_sys::Win32::Graphics::Dwm::MARGINS {
+                            cxLeftWidth: 0,
+                            cxRightWidth: 0,
+                            cyTopHeight: 0,
+                            cyBottomHeight: 0,
+                        };
+                        DwmExtendFrameIntoClientArea(h, &margins);
+
+                        // Also remove the window region to eliminate any border
+                        use windows_sys::Win32::Graphics::Gdi::SetWindowRgn;
+                        SetWindowRgn(h, std::ptr::null_mut(), 1);
+
+                        // Force style update
                         SetWindowPos(h, std::ptr::null_mut(), 0, 0, 0, 0,
                             SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
                     }
