@@ -4,64 +4,21 @@ import { useStore } from "../../stores/store";
 import { quitApp } from "../../lib/tauri";
 import { t } from "../../lib/i18n";
 
-const isWindows = navigator.userAgent.includes("Windows");
-
 export function AppShell({ children }: { children: React.ReactNode }) {
   const isSlid = useStore((s) => s.isSlid);
   const edge = useStore((s) => s.windowConfig.edge);
   const panelColor = useStore((s) => s.windowConfig.panelColor);
-  const handleColor = useStore((s) => s.windowConfig.handleColor);
   const view = useStore((s) => s.view);
 
   const isHorizontal = edge === "top" || edge === "bottom";
 
-  const roundingClass = isWindows ? "" : {
+  const roundingClass = {
     right: "rounded-l-lg",
     left: "rounded-r-lg",
     top: "rounded-b-lg",
     bottom: "rounded-t-lg",
   }[edge];
 
-  // Windows with resize approach: when hidden, window = handle only
-  if (isWindows && !isSlid) {
-    return (
-      <div
-        className="h-screen w-screen overflow-hidden flex items-center justify-center"
-        style={{ backgroundColor: handleColor }}
-      >
-        <SlideTab />
-      </div>
-    );
-  }
-
-  // Windows with resize approach: when open, window = full panel, no handle needed
-  if (isWindows && isSlid) {
-    return (
-      <div
-        className="flex flex-col h-screen w-screen overflow-hidden"
-        style={{ backgroundColor: panelColor }}
-      >
-        <TitleBar />
-        <div className="flex-1 overflow-y-auto overflow-x-hidden text-app">
-          {children}
-        </div>
-        {view === "vault-list" && (
-          <button
-            onClick={() => quitApp()}
-            className="absolute bottom-3 right-3 p-2 text-app-faint hover:text-red-400 transition-colors cursor-pointer rounded-full hover:bg-black/10"
-            title={t("quitSidewinder")}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
-              <line x1="12" y1="2" x2="12" y2="12" />
-            </svg>
-          </button>
-        )}
-      </div>
-    );
-  }
-
-  // macOS / Linux: transparent window with handle + panel
   const panelStyle: React.CSSProperties = {
     backgroundColor: isSlid ? panelColor : "transparent",
   };
