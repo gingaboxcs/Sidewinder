@@ -65,8 +65,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 
+  // On Windows when open, the handle column background matches the panel
+  // so it looks like the handle is embedded in the panel edge (no black strip).
+  const handleColumnBg = isWindows && isSlid ? panelColor : undefined;
+
   const handle = (
-    <div className="flex shrink-0 items-center justify-center">
+    <div
+      className="flex shrink-0 items-center justify-center"
+      style={handleColumnBg ? { backgroundColor: handleColumnBg } : undefined}
+    >
       <SlideTab />
     </div>
   );
