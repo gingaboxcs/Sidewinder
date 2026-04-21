@@ -150,11 +150,15 @@ struct Geometry {
 
 /// Whether to use the resize approach (vs position-only) for sliding.
 /// macOS needs resize for top/bottom (OS clamps vertical position).
-/// All other platforms use position-only (window slides off-screen).
+/// Windows uses resize on all edges so the collapsed window is exactly
+/// handle-sized — otherwise the opaque black background shows as an
+/// "outline" above/below the handle within the on-screen strip.
 fn needs_resize(edge: &Edge) -> bool {
     #[cfg(target_os = "macos")]
     { matches!(edge, Edge::Top | Edge::Bottom) }
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(target_os = "windows")]
+    { let _ = edge; true }
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     { let _ = edge; false }
 }
 

@@ -4,6 +4,8 @@ import { useStore } from "../../stores/store";
 import { quitApp } from "../../lib/tauri";
 import { t } from "../../lib/i18n";
 
+const isWindows = navigator.userAgent.includes("Windows");
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const isSlid = useStore((s) => s.isSlid);
   const edge = useStore((s) => s.windowConfig.edge);
@@ -11,6 +13,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const view = useStore((s) => s.view);
 
   const isHorizontal = edge === "top" || edge === "bottom";
+
+  // Windows uses resize sliding: when collapsed, the window is sized to the
+  // handle only. Render just the handle so no panel layout flashes during
+  // the shrink animation and no opaque background pixels leak around it.
+  if (isWindows && !isSlid) {
+    return (
+      <div className="h-screen w-screen overflow-hidden flex items-center justify-center bg-transparent">
+        <SlideTab />
+      </div>
+    );
+  }
 
   const roundingClass = {
     right: "rounded-l-lg",
