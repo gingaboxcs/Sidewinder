@@ -25,9 +25,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Windows when open: window is exactly panel-sized, don't render a handle
-  // column alongside it (would show as a black strip since bg is opaque).
+  // Windows when open: panel fills the window, handle is absolutely positioned
+  // on the edge so it doesn't create a black column in the layout.
   if (isWindows && isSlid) {
+    const handlePosition: React.CSSProperties = {
+      position: "absolute",
+      zIndex: 10,
+      ...(edge === "right" && { left: 0, top: "50%", transform: "translateY(-50%)" }),
+      ...(edge === "left" && { right: 0, top: "50%", transform: "translateY(-50%)" }),
+      ...(edge === "top" && { bottom: 0, left: "50%", transform: "translateX(-50%)" }),
+      ...(edge === "bottom" && { top: 0, left: "50%", transform: "translateX(-50%)" }),
+    };
+
     return (
       <div
         className="flex flex-col h-screen w-screen overflow-hidden relative"
@@ -49,6 +58,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </svg>
           </button>
         )}
+        <div style={handlePosition}>
+          <SlideTab />
+        </div>
       </div>
     );
   }
