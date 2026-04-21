@@ -25,6 +25,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Windows when open: window is exactly panel-sized, don't render a handle
+  // column alongside it (would show as a black strip since bg is opaque).
+  if (isWindows && isSlid) {
+    return (
+      <div
+        className="flex flex-col h-screen w-screen overflow-hidden relative"
+        style={{ backgroundColor: panelColor }}
+      >
+        <TitleBar />
+        <div className="flex-1 overflow-y-auto overflow-x-hidden text-app">
+          {children}
+        </div>
+        {view === "vault-list" && (
+          <button
+            onClick={() => quitApp()}
+            className="absolute bottom-3 right-3 p-2 text-app-faint hover:text-red-400 transition-colors cursor-pointer rounded-full hover:bg-black/10"
+            title={t("quitSidewinder")}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+              <line x1="12" y1="2" x2="12" y2="12" />
+            </svg>
+          </button>
+        )}
+      </div>
+    );
+  }
+
   const roundingClass = {
     right: "rounded-l-lg",
     left: "rounded-r-lg",
