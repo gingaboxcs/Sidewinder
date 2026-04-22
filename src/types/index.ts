@@ -1,5 +1,5 @@
 export type ViewMode = "accordion" | "full" | "always-open";
-export type EditMode = "markdown" | "code" | "plaintext";
+export type EditMode = "markdown" | "code" | "plaintext" | "copy";
 export type SortMode = "alphabetical" | "modified" | "manual";
 export type InsertPosition = "top" | "bottom";
 export type Edge = "right" | "left" | "top" | "bottom";

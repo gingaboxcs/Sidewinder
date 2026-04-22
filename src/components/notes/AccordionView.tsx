@@ -2,13 +2,52 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useStore } from "../../stores/store";
 import { useSortedNotes } from "../../hooks/useSortedNotes";
 import { updateVault, deleteNote, deleteFolder, readNotesBatch, renameNote, createNote, saveNote, listFolderContents } from "../../lib/tauri";
-import { NoteContent } from "./NoteContent";
+import { NoteContent, parseCopyContent } from "./NoteContent";
+import { readNote } from "../../lib/tauri";
 import { ViewModeSelector } from "../common/ViewModeSelector";
 import { EditModeSelector } from "../common/EditModeSelector";
 import { ConfirmDialog } from "../common/ConfirmDialog";
 import { MoveNoteDialog } from "./MoveNoteDialog";
 import type { EditMode, FolderEntry, ViewMode } from "../../types";
 import { t } from "../../lib/i18n";
+
+function QuickCopyButton({ absolutePath }: { absolutePath: string }) {
+  const [copied, setCopied] = useState(false);
+  const loadedContent = useStore((s) => s.loadedContent);
+  const setNoteContent = useStore((s) => s.setNoteContent);
+
+  const handleClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      let content = loadedContent[absolutePath];
+      if (content == null) {
+        content = await readNote(absolutePath);
+        setNoteContent(absolutePath, content);
+      }
+      const { copy } = parseCopyContent(content);
+      if (copy) {
+        await navigator.clipboard.writeText(copy);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }
+    } catch (e) {
+      console.error("Failed to copy:", e);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      className={`p-0.5 cursor-pointer transition-colors ${copied ? "text-green-400" : "text-app-faint hover:text-app-muted"}`}
+      title={copied ? t("copied") : t("copyToClipboard")}
+    >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+      </svg>
+    </button>
+  );
+}
 
 export function AccordionView() {
   const { notes: allNotes, loadNoteContent, sortMode, refreshNotes } = useSortedNotes();
@@ -596,6 +635,9 @@ export function AccordionView() {
                       <path d="M12 17v5" /><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16h14v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />
                     </svg>
                   </button>
+                  {noteEditMode === "copy" && (
+                    <QuickCopyButton absolutePath={note.absolutePath} />
+                  )}
                   <ViewModeSelector noteRelativePath={note.relativePath} compact />
                   <EditModeSelector noteRelativePath={note.relativePath} />
                   <div className="w-[28px]" />

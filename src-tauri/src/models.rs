@@ -187,6 +187,7 @@ pub enum EditMode {
     Markdown,
     Code,
     Plaintext,
+    Copy,
 }
 
 impl Default for EditMode {

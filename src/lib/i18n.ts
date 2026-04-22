@@ -90,6 +90,12 @@ export interface Translations {
   code: string;
   plainText: string;
   richText: string;
+  copyNote: string;
+  copyContent: string;
+  copyContentPlaceholder: string;
+  notesPlaceholder: string;
+  copyToClipboard: string;
+  copied: string;
 
   // Sort
   alphabetical: string;
@@ -351,6 +357,12 @@ const en: Translations = {
   code: "Code",
   plainText: "Plain Text",
   richText: "Rich Text",
+  copyNote: "Copy",
+  copyContent: "Copy content",
+  copyContentPlaceholder: "What to copy when clicked...",
+  notesPlaceholder: "Notes...",
+  copyToClipboard: "Copy to clipboard",
+  copied: "Copied!",
 
   alphabetical: "A-Z",
   recent: "Recent",

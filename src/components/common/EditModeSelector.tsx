@@ -22,7 +22,7 @@ export function EditModeSelector({ noteRelativePath }: Props) {
   const handleChange = async (e: React.MouseEvent) => {
     e.stopPropagation();
 
-    const modes: EditMode[] = ["markdown", "code", "plaintext"];
+    const modes: EditMode[] = ["markdown", "code", "plaintext", "copy"];
     const currentIdx = modes.indexOf(currentMode);
     const nextMode = modes[(currentIdx + 1) % modes.length];
 
@@ -53,12 +53,14 @@ export function EditModeSelector({ noteRelativePath }: Props) {
     markdown: "MD",
     code: "</>",
     plaintext: "Txt",
+    copy: "CP",
   };
 
   const tooltips: Record<EditMode, string> = {
     markdown: t("markdown"),
     code: t("code"),
     plaintext: t("plainText"),
+    copy: t("copyNote"),
   };
 
   return (

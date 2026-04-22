@@ -133,6 +133,7 @@ export function VaultEditDialog({ vault, onClose, onSave }: Props) {
                 <option value="markdown">{t("markdown")}</option>
                 <option value="code">{t("code")}</option>
                 <option value="plaintext">{t("plainText")}</option>
+                <option value="copy">{t("copyNote")}</option>
               </select>
             </div>
             <div>

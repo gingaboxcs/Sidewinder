@@ -15,12 +15,29 @@ interface Props {
   startInEditMode?: boolean;
 }
 
+export const COPY_DELIMITER = "<!-- ===SIDEWINDER_NOTES=== -->";
+
+export function parseCopyContent(content: string): { copy: string; notes: string } {
+  const idx = content.indexOf(COPY_DELIMITER);
+  if (idx === -1) return { copy: content, notes: "" };
+  return {
+    copy: content.substring(0, idx).trim(),
+    notes: content.substring(idx + COPY_DELIMITER.length).trim(),
+  };
+}
+
+export function combineCopyContent(copy: string, notes: string): string {
+  return `${copy}\n\n${COPY_DELIMITER}\n\n${notes}`;
+}
+
 export function NoteContent({ content, absolutePath, editMode, startInEditMode }: Props) {
   switch (editMode) {
     case "code":
       return <CodeEditor content={content} absolutePath={absolutePath} startInEditMode={startInEditMode} />;
     case "plaintext":
       return <PlainTextEditor content={content} absolutePath={absolutePath} startInEditMode={startInEditMode} />;
+    case "copy":
+      return <CopyEditor content={content} absolutePath={absolutePath} startInEditMode={startInEditMode} />;
     default:
       return <MarkdownEditor content={content} absolutePath={absolutePath} startInEditMode={startInEditMode} />;
   }
@@ -408,5 +425,114 @@ function ToolbarBtn({ onClick, title, children }: {
     >
       {children}
     </button>
+  );
+}
+
+// ─── Copy Note Editor ─────────────────────────────────────────────────────────
+
+function CopyEditor({ content, absolutePath, startInEditMode }: { content: string; absolutePath: string; startInEditMode?: boolean }) {
+  const parsed = parseCopyContent(content);
+  const [copyText, setCopyText] = useState(parsed.copy);
+  const [notesText, setNotesText] = useState(parsed.notes);
+  const [isEditing, setIsEditing] = useState(startInEditMode || content === "");
+  const [copied, setCopied] = useState(false);
+  const { saveStatus, scheduleSave, saveNow } = useAutosave(content, absolutePath);
+
+  useEffect(() => {
+    if (!isEditing) {
+      const p = parseCopyContent(content);
+      setCopyText(p.copy);
+      setNotesText(p.notes);
+    }
+  }, [content, isEditing]);
+
+  const doSave = (c: string, n: string) => {
+    scheduleSave(combineCopyContent(c, n));
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(copyText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (e) {
+      console.error("Failed to copy:", e);
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <div>
+        <div className="flex items-center gap-2 mb-2 sticky top-0 z-10 py-1" style={{ backgroundColor: "inherit" }}>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-700/40 text-app-faint">{t("copyNote")}</span>
+          <SaveIndicator status={saveStatus} />
+        </div>
+        <label className="text-[10px] text-app-muted block mb-1">{t("copyContent")}</label>
+        <textarea
+          value={copyText}
+          onChange={(e) => { setCopyText(e.target.value); doSave(e.target.value, notesText); }}
+          placeholder={t("copyContentPlaceholder")}
+          className="w-full bg-black/20 border border-neutral-700 rounded px-3 py-2 mb-3
+                     text-app focus:outline-none focus:border-neutral-500 resize-none text-sm leading-relaxed
+                     font-mono"
+          rows={4}
+          spellCheck={false}
+        />
+        <label className="text-[10px] text-app-muted block mb-1">{t("notes")}</label>
+        <textarea
+          value={notesText}
+          onChange={(e) => { setNotesText(e.target.value); doSave(copyText, e.target.value); }}
+          onBlur={() => saveNow(combineCopyContent(copyText, notesText))}
+          placeholder={t("notesPlaceholder")}
+          className="w-full bg-black/20 border border-neutral-700 rounded px-3 py-2
+                     text-app focus:outline-none focus:border-neutral-500 resize-none text-sm leading-relaxed"
+          rows={3}
+          spellCheck
+        />
+        <div className="flex justify-end mt-2">
+          <button
+            onClick={() => { saveNow(combineCopyContent(copyText, notesText)); setIsEditing(false); }}
+            style={{ backgroundColor: "var(--accent)" }}
+            className="text-xs px-3 py-1.5 rounded text-white cursor-pointer"
+          >{t("done")}</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div onDoubleClick={() => setIsEditing(true)} className="cursor-text group relative">
+      {copyText && (
+        <div className="mb-2">
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 text-xs px-2 py-1 rounded bg-neutral-700/50 hover:bg-neutral-700 text-app-muted hover:text-app transition-colors cursor-pointer"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            </svg>
+            {copied ? t("copied") : t("copyToClipboard")}
+          </button>
+          <pre className="mt-2 bg-black/30 rounded px-3 py-2 overflow-x-auto text-xs font-mono text-app whitespace-pre-wrap break-words">
+            {copyText}
+          </pre>
+        </div>
+      )}
+      {notesText && (
+        <div className="markdown-content text-sm text-app leading-relaxed">
+          <Markdown remarkPlugins={[remarkGfm, remarkBreaks]}>{notesText}</Markdown>
+        </div>
+      )}
+      <button
+        onClick={() => setIsEditing(true)}
+        className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-app-faint hover:text-app cursor-pointer"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+          <path d="m15 5 4 4" />
+        </svg>
+      </button>
+    </div>
   );
 }

@@ -565,11 +565,12 @@ function CreationTab({ localConfig, setLocalConfig }: {
       {/* Default Edit Mode */}
       <div>
         <label className="text-xs text-app-muted block mb-2">{t("defaultFormatting")}</label>
-        <div className="grid grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-4 gap-1.5">
           {([
             { id: "markdown" as EditMode, label: t("markdown") },
             { id: "code" as EditMode, label: t("code") },
             { id: "plaintext" as EditMode, label: t("plainText") },
+            { id: "copy" as EditMode, label: t("copyNote") },
           ]).map(({ id, label }) => (
             <button
               key={id}
