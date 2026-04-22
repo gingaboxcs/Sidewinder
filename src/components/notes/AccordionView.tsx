@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useStore } from "../../stores/store";
 import { useSortedNotes } from "../../hooks/useSortedNotes";
 import { updateVault, deleteNote, deleteFolder, readNotesBatch, renameNote, createNote, saveNote, listFolderContents } from "../../lib/tauri";
-import { NoteContent, parseCopyContent } from "./NoteContent";
+import { NoteContent, parseCopyContent, combineCopyContent } from "./NoteContent";
 import { readNote } from "../../lib/tauri";
 import { ViewModeSelector } from "../common/ViewModeSelector";
 import { EditModeSelector } from "../common/EditModeSelector";
@@ -175,17 +175,25 @@ export function AccordionView() {
   const setCreatingNote = useStore((s) => s.setCreatingNote);
   const [newNoteTitle, setNewNoteTitle] = useState("");
   const [newNoteContent, setNewNoteContent] = useState("");
+  const [newNoteCopyContent, setNewNoteCopyContent] = useState("");
   const [newNoteError, setNewNoteError] = useState("");
   const newNoteTitleRef = useRef<HTMLInputElement>(null);
+
+  // Edit mode for the new note (defaults to vault/folder default, user can override)
+  const [newNoteMode, setNewNoteMode] = useState<EditMode>(effectiveEditMode as EditMode);
+  const isCopyMode = newNoteMode === "copy";
 
   // Focus title input when creation form appears
   useEffect(() => {
     if (creatingNote) {
       setNewNoteTitle("");
       setNewNoteContent("");
+      setNewNoteCopyContent("");
       setNewNoteError("");
+      setNewNoteMode(effectiveEditMode as EditMode);
       requestAnimationFrame(() => newNoteTitleRef.current?.focus());
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [creatingNote]);
 
   const handleCreateNoteDone = async () => {
@@ -202,14 +210,33 @@ export function AccordionView() {
           name = `${title} ${counter}`;
         }
       }
-      if (newNoteContent.trim()) {
-        await saveNote(fullPath, newNoteContent);
+      const finalContent = isCopyMode
+        ? combineCopyContent(newNoteCopyContent, newNoteContent)
+        : newNoteContent;
+      if (finalContent.trim()) {
+        await saveNote(fullPath, finalContent);
       }
+
+      // If the selected mode differs from the vault's default, save as override
+      if (vault && newNoteMode !== effectiveEditMode) {
+        const relPath = fullPath.replace(vault.path, "").replace(/^\//, "");
+        const existing = vault.noteOverrides[relPath] || {};
+        const updatedVault = {
+          ...vault,
+          noteOverrides: {
+            ...vault.noteOverrides,
+            [relPath]: { ...existing, editMode: newNoteMode },
+          },
+        };
+        setVaults(vaults.map((v) => v.id === vault.id ? updatedVault : v));
+        updateVault(updatedVault).catch(console.error);
+      }
+
       setCreatingNote(false);
       await refreshNotes();
       // Expand the new note
       toggleNote(fullPath);
-      setNoteContent(fullPath, newNoteContent);
+      setNoteContent(fullPath, finalContent);
     } catch (e: any) {
       setNewNoteError(e?.toString() || "Failed to create note");
     }
@@ -219,6 +246,7 @@ export function AccordionView() {
     setCreatingNote(false);
     setNewNoteTitle("");
     setNewNoteContent("");
+    setNewNoteCopyContent("");
     setNewNoteError("");
   };
 
@@ -372,7 +400,7 @@ export function AccordionView() {
       {/* Inline note creation form */}
       {creatingNote && (
         <div className="rounded-lg border border-neutral-700/50 overflow-hidden mb-1">
-          <div className="px-3 py-2.5 bg-neutral-800/70">
+          <div className="px-3 py-2.5 bg-neutral-800/70 flex items-center gap-2">
             <input
               ref={newNoteTitleRef}
               value={newNoteTitle}
@@ -381,21 +409,52 @@ export function AccordionView() {
                 if (e.key === "Escape") handleCreateNoteCancel();
               }}
               placeholder={t("noteTitle")}
-              className="w-full bg-black/30 border border-neutral-600 rounded px-2 py-0.5
+              className="flex-1 min-w-0 bg-black/30 border border-neutral-600 rounded px-2 py-0.5
                          text-sm text-app focus:outline-none focus:border-neutral-500"
             />
+            <select
+              value={newNoteMode}
+              onChange={(e) => setNewNoteMode(e.target.value as EditMode)}
+              className="shrink-0 bg-black/30 border border-neutral-600 rounded px-1.5 py-0.5
+                         text-xs text-app-muted focus:outline-none focus:border-neutral-500 cursor-pointer"
+              title={t("edit")}
+            >
+              <option value="markdown">{t("markdown")}</option>
+              <option value="code">{t("code")}</option>
+              <option value="plaintext">{t("plainText")}</option>
+              <option value="copy">{t("copyNote")}</option>
+            </select>
           </div>
           <div className="px-3 py-3 bg-neutral-900/50 border-t border-neutral-700/30">
+            {isCopyMode && (
+              <>
+                <label className="text-[10px] text-app-muted block mb-1">{t("copyContent")}</label>
+                <textarea
+                  value={newNoteCopyContent}
+                  onChange={(e) => setNewNoteCopyContent(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") handleCreateNoteCancel();
+                  }}
+                  placeholder={t("copyContentPlaceholder")}
+                  className="w-full bg-black/20 border border-neutral-700 rounded px-3 py-2 mb-3
+                             text-app focus:outline-none focus:border-neutral-500 resize-none text-sm leading-relaxed
+                             font-mono"
+                  rows={4}
+                  spellCheck={false}
+                />
+                <label className="text-[10px] text-app-muted block mb-1">{t("notes")}</label>
+              </>
+            )}
             <textarea
               value={newNoteContent}
               onChange={(e) => setNewNoteContent(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Escape") handleCreateNoteCancel();
               }}
-              placeholder={t("notes") + "..."}
+              placeholder={isCopyMode ? t("notesPlaceholder") : t("notes") + "..."}
               className="w-full bg-black/20 border border-neutral-700 rounded px-3 py-2
                          text-app focus:outline-none focus:border-neutral-500 resize-none text-sm leading-relaxed min-h-[80px]"
-              rows={4}
+              rows={isCopyMode ? 3 : 4}
             />
             {newNoteError && <p className="text-[10px] text-red-400 mt-1">{newNoteError}</p>}
             <div className="flex justify-end gap-2 mt-2">
