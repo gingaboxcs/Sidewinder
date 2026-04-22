@@ -50,6 +50,17 @@ html, body, #root {
   padding: 0;
 }
 
+/* Windows: use magenta color key for true transparency via WS_EX_LAYERED.
+   Any element with this exact background will be rendered as transparent. */
+[data-platform="windows"] html,
+[data-platform="windows"] body,
+[data-platform="windows"] #root {
+  background: #ff00ff !important;
+}
+[data-platform="windows"] .win-transparent {
+  background-color: #ff00ff !important;
+}
+
 
 /* Range slider accent */
 input[type="range"] {

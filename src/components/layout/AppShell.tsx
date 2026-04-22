@@ -19,7 +19,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // the shrink animation and no opaque background pixels leak around it.
   if (isWindows && !isSlid) {
     return (
-      <div className="h-screen w-screen overflow-hidden flex items-center justify-center bg-transparent">
+      <div className="h-screen w-screen overflow-hidden flex items-center justify-center">
         <SlideTab />
       </div>
     );
@@ -73,14 +73,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (isHorizontal) {
     return (
-      <div className="flex flex-col h-screen w-screen overflow-hidden bg-transparent">
+      <div className="flex flex-col h-screen w-screen overflow-hidden ">
         {edge === "top" ? <>{panel}{handle}</> : <>{handle}{panel}</>}
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-transparent">
+    <div className="flex h-screen w-screen overflow-hidden ">
       {edge === "left" ? <>{panel}{handle}</> : <>{handle}{panel}</>}
     </div>
   );
