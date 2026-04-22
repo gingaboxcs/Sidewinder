@@ -26,7 +26,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
 
-  const roundingClass = {
+  // No rounded corners on Windows - they create visible gaps since the
+  // window can't be truly transparent (WebView2 limitation).
+  const roundingClass = isWindows ? "" : {
     right: "rounded-l-lg",
     left: "rounded-r-lg",
     top: "rounded-b-lg",

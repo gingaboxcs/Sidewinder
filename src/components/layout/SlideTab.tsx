@@ -1,6 +1,8 @@
 import { useWindowSlide } from "../../hooks/useWindowSlide";
 import { useStore } from "../../stores/store";
 
+const isWindows = navigator.userAgent.includes("Windows");
+
 export function SlideTab() {
   const { toggle, isSlid } = useWindowSlide();
   const edge = useStore((s) => s.windowConfig.edge);
@@ -37,7 +39,8 @@ export function SlideTab() {
     ? alignment === "start" ? "flex-start" : alignment === "end" ? "flex-end" : "center"
     : undefined;
 
-  const borderRadius = {
+  // No rounded corners on Windows - they create visible gaps against opaque window
+  const borderRadius = isWindows ? "0" : {
     right: "4px 0 0 4px",
     left: "0 4px 4px 0",
     top: "0 0 4px 4px",
