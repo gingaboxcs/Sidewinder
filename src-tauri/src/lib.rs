@@ -26,7 +26,7 @@ pub fn run() {
                 app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             }
 
-            // Windows: remove all borders/frames and enable layered transparency
+            // Windows: remove all borders/frames (removes the white line around window)
             #[cfg(target_os = "windows")]
             {
                 let window = app.get_webview_window("main").unwrap();
@@ -38,7 +38,6 @@ pub fn run() {
                         use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
                         // Remove ALL border/frame styles, keep only WS_POPUP
-                        // WS_BORDER, WS_THICKFRAME, WS_CAPTION, WS_DLGFRAME all cause the white line
                         let style = GetWindowLongW(h, GWL_STYLE);
                         let new_style = (style
                             & !(WS_BORDER as i32)
@@ -48,19 +47,14 @@ pub fn run() {
                             | WS_POPUP as i32;
                         SetWindowLongW(h, GWL_STYLE, new_style);
 
-                        // Add WS_EX_LAYERED for transparency + WS_EX_TOOLWINDOW to hide from alt-tab
+                        // Tool window style hides from alt-tab
                         let ex_style = GetWindowLongW(h, GWL_EXSTYLE);
                         SetWindowLongW(
                             h,
                             GWL_EXSTYLE,
-                            (ex_style | WS_EX_LAYERED as i32 | WS_EX_TOOLWINDOW as i32) & !(WS_EX_APPWINDOW as i32),
+                            (ex_style | WS_EX_TOOLWINDOW as i32) & !(WS_EX_APPWINDOW as i32),
                         );
 
-                        // Use color key transparency - magenta (#FF00FF) will be rendered as transparent
-                        // We'll use this color in CSS for any area we want invisible
-                        SetLayeredWindowAttributes(h, 0x00FF00FF, 255, LWA_COLORKEY);
-
-                        // Force style update
                         SetWindowPos(
                             h,
                             std::ptr::null_mut(),
