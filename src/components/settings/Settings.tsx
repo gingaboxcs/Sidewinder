@@ -1217,8 +1217,10 @@ function AboutTab() {
   const [updateState, setUpdateState] = useState<"idle" | "checking" | "available" | "uptodate" | "updating" | "error">("idle");
   const [updateVersion, setUpdateVersion] = useState("");
 
+  const [updateError, setUpdateError] = useState("");
   const checkForUpdates = async () => {
     setUpdateState("checking");
+    setUpdateError("");
     try {
       const { check } = await import("@tauri-apps/plugin-updater");
       const update = await check();
@@ -1228,7 +1230,9 @@ function AboutTab() {
       } else {
         setUpdateState("uptodate");
       }
-    } catch {
+    } catch (e: any) {
+      console.error("Update check failed:", e);
+      setUpdateError(String(e?.message || e));
       setUpdateState("error");
     }
   };
@@ -1294,7 +1298,10 @@ function AboutTab() {
               <p className="text-sm text-app-muted">{t("updating")}</p>
             )}
             {updateState === "error" && (
-              <p className="text-sm text-red-400">Update check failed</p>
+              <div>
+                <p className="text-sm text-red-400">Update check failed</p>
+                {updateError && <p className="text-[10px] text-red-400/70 mt-1 break-all">{updateError}</p>}
+              </div>
             )}
             {updateState === "idle" && (
               <p className="text-sm text-app-muted">{t("version")} {__APP_VERSION__}</p>
