@@ -46,7 +46,8 @@ export function NoteContent({ content, absolutePath, editMode, startInEditMode }
 // ─── Shared autosave hook ─────────────────────────────────────────────────────
 
 function useAutosave(content: string, absolutePath: string) {
-  const [saveStatus, setSaveStatus] = useState<"" | "saving" | "saved">("");
+  const [saveStatus, setSaveStatus] = useState<"" | "saving" | "saved" | "error">("");
+  const [saveError, setSaveError] = useState("");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const statusTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const setNoteContent = useStore((s) => s.setNoteContent);
@@ -66,6 +67,7 @@ function useAutosave(content: string, absolutePath: string) {
   const doSave = useCallback(async (text: string) => {
     if (text === latestContent.current) return;
     setSaveStatus("saving");
+    setSaveError("");
     try {
       await saveNote(absolutePath, text);
       setNoteContent(absolutePath, text);
@@ -73,9 +75,10 @@ function useAutosave(content: string, absolutePath: string) {
       setSaveStatus("saved");
       if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
       statusTimerRef.current = setTimeout(() => setSaveStatus(""), 2000);
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to save note:", e);
-      setSaveStatus("");
+      setSaveError(String(e?.message || e));
+      setSaveStatus("error");
     }
   }, [absolutePath, setNoteContent]);
 
@@ -89,11 +92,18 @@ function useAutosave(content: string, absolutePath: string) {
     doSave(text);
   }, [doSave]);
 
-  return { saveStatus, scheduleSave, saveNow };
+  return { saveStatus, saveError, scheduleSave, saveNow };
 }
 
-function SaveIndicator({ status }: { status: string }) {
+function SaveIndicator({ status, error }: { status: string; error?: string }) {
   if (!status) return null;
+  if (status === "error") {
+    return (
+      <span className="text-[10px] text-red-400" title={error}>
+        Save failed: {error ? (error.length > 40 ? error.slice(0, 40) + "…" : error) : "unknown error"}
+      </span>
+    );
+  }
   return (
     <span className="text-[10px] text-app-faint">
       {status === "saving" ? t("saving") : t("saved")}
@@ -107,7 +117,7 @@ function MarkdownEditor({ content, absolutePath, startInEditMode }: { content: s
   const [isEditing, setIsEditing] = useState(startInEditMode || content === "");
   const [editContent, setEditContent] = useState(content);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { saveStatus, scheduleSave, saveNow } = useAutosave(content, absolutePath);
+  const { saveStatus, saveError, scheduleSave, saveNow } = useAutosave(content, absolutePath);
 
   useEffect(() => {
     if (!isEditing) setEditContent(content);
@@ -126,7 +136,7 @@ function MarkdownEditor({ content, absolutePath, startInEditMode }: { content: s
       <div>
         <div className="flex items-center gap-2 mb-2 sticky top-0 z-10 py-1" style={{ backgroundColor: "inherit" }}>
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-700/40 text-app-faint">{t("markdown")}</span>
-          <SaveIndicator status={saveStatus} />
+          <SaveIndicator status={saveStatus} error={saveError} />
         </div>
         <textarea
           ref={textareaRef}
@@ -181,7 +191,7 @@ function CodeEditor({ content, absolutePath, startInEditMode }: { content: strin
   const [editContent, setEditContent] = useState(content);
   const [isEditing, setIsEditing] = useState(startInEditMode || content === "");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { saveStatus, scheduleSave, saveNow } = useAutosave(content, absolutePath);
+  const { saveStatus, saveError, scheduleSave, saveNow } = useAutosave(content, absolutePath);
 
   useEffect(() => {
     if (!isEditing) setEditContent(content);
@@ -221,7 +231,7 @@ function CodeEditor({ content, absolutePath, startInEditMode }: { content: strin
       <div>
         <div className="flex items-center gap-2 mb-2 sticky top-0 z-10 py-1" style={{ backgroundColor: "inherit" }}>
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-700/40 text-app-faint">{t("code")}</span>
-          <SaveIndicator status={saveStatus} />
+          <SaveIndicator status={saveStatus} error={saveError} />
         </div>
         {/* Overlay approach: highlighted HTML behind, transparent textarea on top */}
         <div className="relative">
@@ -279,7 +289,7 @@ function CodeEditor({ content, absolutePath, startInEditMode }: { content: strin
 
 function PlainTextEditor({ content, absolutePath, startInEditMode }: { content: string; absolutePath: string; startInEditMode?: boolean }) {
   const editableRef = useRef<HTMLDivElement>(null);
-  const { saveStatus, scheduleSave, saveNow } = useAutosave(content, absolutePath);
+  const { saveStatus, saveError, scheduleSave, saveNow } = useAutosave(content, absolutePath);
   const [isEditing, setIsEditing] = useState(startInEditMode || content === "");
 
   // Populate contentEditable when entering edit mode or when content changes
@@ -356,7 +366,7 @@ function PlainTextEditor({ content, absolutePath, startInEditMode }: { content: 
         <span className="text-[10px]">P</span>
       </ToolbarBtn>
       <div className="flex-1" />
-      <SaveIndicator status={saveStatus} />
+      <SaveIndicator status={saveStatus} error={saveError} />
     </div>
   );
 
@@ -385,7 +395,7 @@ function PlainTextEditor({ content, absolutePath, startInEditMode }: { content: 
       <div className="sticky top-0 z-10 py-1 mb-2" style={{ backgroundColor: "inherit" }}>
         <div className="flex items-center gap-2">
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-700/40 text-app-faint">{t("richText")}</span>
-          <SaveIndicator status={saveStatus} />
+          <SaveIndicator status={saveStatus} error={saveError} />
         </div>
         <div className="mt-1.5 px-1 py-1 bg-neutral-800/80 rounded border border-neutral-700/50">
           {toolbar}
@@ -436,7 +446,7 @@ function CopyEditor({ content, absolutePath, startInEditMode }: { content: strin
   const [notesText, setNotesText] = useState(parsed.notes);
   const [isEditing, setIsEditing] = useState(startInEditMode || content === "");
   const [copied, setCopied] = useState(false);
-  const { saveStatus, scheduleSave, saveNow } = useAutosave(content, absolutePath);
+  const { saveStatus, saveError, scheduleSave, saveNow } = useAutosave(content, absolutePath);
 
   useEffect(() => {
     if (!isEditing) {
@@ -465,7 +475,7 @@ function CopyEditor({ content, absolutePath, startInEditMode }: { content: strin
       <div>
         <div className="flex items-center gap-2 mb-2 sticky top-0 z-10 py-1" style={{ backgroundColor: "inherit" }}>
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-700/40 text-app-faint">{t("copyNote")}</span>
-          <SaveIndicator status={saveStatus} />
+          <SaveIndicator status={saveStatus} error={saveError} />
         </div>
         <label className="text-[10px] text-app-muted block mb-1">{t("copyContent")}</label>
         <textarea
