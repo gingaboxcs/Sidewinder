@@ -69,8 +69,9 @@ export function AccordionView() {
   const activePath = currentFolderPath || vault?.path || "";
 
   // Get effective settings for current folder (folder override > vault default)
+  // Use forward slashes for override keys regardless of platform.
   const folderRelPath = currentFolderPath && vault
-    ? currentFolderPath.replace(vault.path, "").replace(/^\//, "")
+    ? currentFolderPath.replace(vault.path, "").replace(/^[/\\]/, "").replace(/\\/g, "/")
     : "";
   const folderOverride = folderRelPath && vault?.folderOverrides
     ? vault.folderOverrides[folderRelPath]
@@ -100,9 +101,14 @@ export function AccordionView() {
     }).catch(console.error);
   }, [activePath, allNotes, effectiveSortMode, effectiveSortDescending]);
 
-  // Filter notes to only show ones in the current folder (not subfolders)
+  // Filter notes to only show ones in the current folder (not subfolders).
+  // Handle both / and \ separators (Windows uses \).
   const filteredNotes = allNotes.filter((n) => {
-    const noteDir = n.absolutePath.substring(0, n.absolutePath.lastIndexOf("/"));
+    const lastSlash = Math.max(
+      n.absolutePath.lastIndexOf("/"),
+      n.absolutePath.lastIndexOf("\\"),
+    );
+    const noteDir = n.absolutePath.substring(0, lastSlash);
     return noteDir === activePath;
   });
 
@@ -149,7 +155,7 @@ export function AccordionView() {
   const [movingNote, setMovingNote] = useState<{ path: string; name: string; isFolder?: boolean } | null>(null);
   const saveFolderSettings = async (folderAbsPath: string, updates: Record<string, unknown>) => {
     if (!vault) return;
-    const relPath = folderAbsPath.replace(vault.path, "").replace(/^\//, "");
+    const relPath = folderAbsPath.replace(vault.path, "").replace(/^[/\\]/, "").replace(/\\/g, "/");
     if (!relPath) return;
     const existing = vault.folderOverrides?.[relPath] || {};
     const updated = {

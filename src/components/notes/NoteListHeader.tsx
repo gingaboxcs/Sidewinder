@@ -31,7 +31,7 @@ export function NoteListHeader() {
 
   // Folder override for current path
   const folderRelPath = currentFolderPath
-    ? currentFolderPath.replace(vault.path, "").replace(/^\//, "")
+    ? currentFolderPath.replace(vault.path, "").replace(/^[/\\]/, "").replace(/\\/g, "/")
     : "";
   const folderOverride = folderRelPath ? vault.folderOverrides?.[folderRelPath] : undefined;
   const effectiveSortMode = folderOverride?.sortMode || vault.sortMode;
