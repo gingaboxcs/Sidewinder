@@ -200,16 +200,27 @@ export function AccordionView() {
     const title = newNoteTitle.trim() || t("untitled");
     try {
       let name = title;
-      let counter = 1;
       let fullPath: string | null = null;
-      while (!fullPath) {
+      let lastError: any = null;
+      // Try at most 50 variations: "Untitled", "Untitled 2", ... "Untitled 50"
+      for (let counter = 1; counter <= 50 && !fullPath; counter++) {
+        name = counter === 1 ? title : `${title} ${counter}`;
         try {
           fullPath = await createNote(activePath, name);
-        } catch {
-          counter++;
-          name = `${title} ${counter}`;
+        } catch (err) {
+          lastError = err;
+          // If the error is NOT "already exists", stop retrying — it's a real error
+          const msg = String(err);
+          if (!msg.toLowerCase().includes("already exists")) {
+            break;
+          }
         }
       }
+      if (!fullPath) {
+        setNewNoteError(`Failed to create note: ${lastError ?? "unknown error"}`);
+        return;
+      }
+
       const finalContent = isCopyMode
         ? combineCopyContent(newNoteCopyContent, newNoteContent)
         : newNoteContent;
@@ -219,7 +230,11 @@ export function AccordionView() {
 
       // If the selected mode differs from the vault's default, save as override
       if (vault && newNoteMode !== effectiveEditMode) {
-        const relPath = fullPath.replace(vault.path, "").replace(/^\//, "");
+        // Handle both / and \ path separators (Windows uses \)
+        const relPath = fullPath
+          .replace(vault.path, "")
+          .replace(/^[/\\]/, "")
+          .replace(/\\/g, "/");
         const existing = vault.noteOverrides[relPath] || {};
         const updatedVault = {
           ...vault,
