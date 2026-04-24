@@ -415,8 +415,8 @@ export function AccordionView() {
             <select
               value={newNoteMode}
               onChange={(e) => setNewNoteMode(e.target.value as EditMode)}
-              className="shrink-0 bg-black/30 border border-neutral-600 rounded px-1.5 py-0.5
-                         text-xs text-app-muted focus:outline-none focus:border-neutral-500 cursor-pointer"
+              className="shrink-0 bg-black/30 border border-neutral-600 rounded px-2 py-0.5
+                         text-sm text-app-muted focus:outline-none focus:border-neutral-500 cursor-pointer"
               title={t("edit")}
             >
               <option value="markdown">{t("markdown")}</option>
