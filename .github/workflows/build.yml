@@ -10,7 +10,43 @@ permissions:
   contents: write
 
 jobs:
+  # Create the draft release first — so all platform builds upload to the same release
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create_release.outputs.result }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Create Release
+        id: create_release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: existing } = await github.rest.repos.listReleases({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            const tagName = context.ref.replace('refs/tags/', '');
+            const found = existing.find(r => r.tag_name === tagName);
+            if (found) {
+              core.setOutput('result', found.id);
+              return found.id;
+            }
+            const { data } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tagName,
+              name: `Sidewinder ${tagName}`,
+              body: '',
+              draft: true,
+              prerelease: false,
+            });
+            core.setOutput('result', data.id);
+            return data.id;
+
   build:
+    needs: create-release
     strategy:
       fail-fast: false
       matrix:
@@ -42,7 +78,6 @@ jobs:
       - name: Install pnpm
         run: npm install -g pnpm@9
 
-      # Linux: install system dependencies for Tauri
       - name: Install Linux dependencies
         if: matrix.platform == 'ubuntu-22.04'
         run: |
@@ -69,9 +104,5 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "Sidewinder ${{ github.ref_name }}"
-          releaseBody: ""
-          releaseDraft: true
-          prerelease: false
+          releaseId: ${{ needs.create-release.outputs.release_id }}
           args: --target ${{ matrix.target }}
