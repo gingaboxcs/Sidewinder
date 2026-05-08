@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useStore } from "../../stores/store";
-import { loadElysiumItems, openInElysium, readNoteMetadata } from "../../lib/tauri";
+import { loadElysiumItems, openInElysium, readNoteMetadata, updateNoteFrontmatter } from "../../lib/tauri";
 import { getItemIcon } from "./ElysiumIcons";
 import { t } from "../../lib/i18n";
 import type { ElysiumItem } from "../../types";
@@ -98,6 +98,22 @@ export function LinkedItemCard({ absolutePath }: Props) {
     }
   };
 
+  const handleUnlink = async () => {
+    try {
+      // Clear all link-related keys
+      await updateNoteFrontmatter(absolutePath, {
+        goalId: null, taskId: null, projectId: null, eventId: null,
+        appointmentId: null, habitId: null, reminderId: null,
+        goalTitle: null, taskTitle: null, projectTitle: null, eventTitle: null,
+        appointmentTitle: null, habitTitle: null, reminderTitle: null,
+      });
+      setMetadata({});
+      setItem(null);
+    } catch (e) {
+      console.error("Failed to unlink:", e);
+    }
+  };
+
   return (
     <div className="mb-3 flex items-center gap-3 px-3 py-2 rounded-lg border border-neutral-700/50 bg-neutral-800/40">
       <div className="shrink-0">{getItemIcon(itemType, item?.kind, 18)}</div>
@@ -119,6 +135,16 @@ export function LinkedItemCard({ absolutePath }: Props) {
         title={t("openInElysium")}
       >
         {t("openInElysium")}
+      </button>
+      <button
+        onClick={handleUnlink}
+        className="shrink-0 p-1 text-app-faint hover:text-red-400 cursor-pointer transition-colors"
+        title={t("unlinkFromElysium")}
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
       </button>
     </div>
   );

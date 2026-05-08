@@ -4,6 +4,7 @@ import { useSortedNotes } from "../../hooks/useSortedNotes";
 import { updateVault, deleteNote, deleteFolder, readNotesBatch, renameNote, createNote, saveNote, listFolderContents } from "../../lib/tauri";
 import { NoteContent, parseCopyContent, combineCopyContent } from "./NoteContent";
 import { LinkedItemCard } from "../elysium/LinkedItemCard";
+import { ElysiumItemPicker } from "../elysium/ElysiumItemPicker";
 import { readNote } from "../../lib/tauri";
 import { ViewModeSelector } from "../common/ViewModeSelector";
 import { EditModeSelector } from "../common/EditModeSelector";
@@ -154,6 +155,8 @@ export function AccordionView() {
 
   const [deletingNote, setDeletingNote] = useState<{ path: string; name: string } | null>(null);
   const [movingNote, setMovingNote] = useState<{ path: string; name: string; isFolder?: boolean } | null>(null);
+  const [linkingNotePath, setLinkingNotePath] = useState<string | null>(null);
+  const elysiumEnabled = useStore((s) => s.elysiumConfig.enabled);
   const saveFolderSettings = async (folderAbsPath: string, updates: Record<string, unknown>) => {
     if (!vault) return;
     const relPath = folderAbsPath.replace(vault.path, "").replace(/^[/\\]/, "").replace(/\\/g, "/");
@@ -719,6 +722,21 @@ export function AccordionView() {
                   {noteEditMode === "copy" && (
                     <QuickCopyButton absolutePath={note.absolutePath} />
                   )}
+                  {elysiumEnabled && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLinkingNotePath(note.absolutePath);
+                      }}
+                      className="p-0.5 cursor-pointer text-app-faint hover:text-app-muted transition-colors"
+                      title={t("linkToElysium")}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                      </svg>
+                    </button>
+                  )}
                   <ViewModeSelector noteRelativePath={note.relativePath} compact />
                   <EditModeSelector noteRelativePath={note.relativePath} />
                   <div className="w-[28px]" />
@@ -814,6 +832,12 @@ export function AccordionView() {
         isFolder={movingNote?.isFolder}
         onClose={() => { setMovingNote(null); refreshNotes(); }}
       />
+      {linkingNotePath && (
+        <ElysiumItemPicker
+          notePath={linkingNotePath}
+          onClose={() => setLinkingNotePath(null)}
+        />
+      )}
     </div>
   );
 }

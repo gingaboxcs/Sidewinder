@@ -96,6 +96,9 @@ export interface Translations {
   notesPlaceholder: string;
   copyToClipboard: string;
   copied: string;
+  linkToElysium: string;
+  searchItems: string;
+  unlinkFromElysium: string;
 
   // Sort
   alphabetical: string;
@@ -363,6 +366,9 @@ const en: Translations = {
   notesPlaceholder: "Notes...",
   copyToClipboard: "Copy to clipboard",
   copied: "Copied!",
+  linkToElysium: "Link to Elysium item",
+  searchItems: "Search items...",
+  unlinkFromElysium: "Unlink from Elysium",
 
   alphabetical: "A-Z",
   recent: "Recent",

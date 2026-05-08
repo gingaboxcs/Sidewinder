@@ -98,6 +98,7 @@ pub fn run() {
             commands::notes::list_notes,
             commands::notes::read_note,
             commands::notes::read_note_metadata,
+            commands::notes::update_note_frontmatter,
             commands::notes::read_notes_batch,
             commands::notes::save_note,
             commands::notes::create_note,

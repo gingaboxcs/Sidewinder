@@ -412,6 +412,72 @@ pub fn read_note_metadata(path: String) -> Result<HashMap<String, String>, Strin
     Ok(parse_frontmatter(&content))
 }
 
+/// Update specific frontmatter keys in a note. If the note has no frontmatter,
+/// one is created. Existing keys are preserved unless overridden.
+/// Pass `null` for a value to remove that key.
+#[tauri::command]
+pub fn update_note_frontmatter(path: String, updates: HashMap<String, Option<String>>) -> Result<(), String> {
+    let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+
+    // Parse existing frontmatter and body
+    let (mut existing, body) = if content.starts_with("---") {
+        let after = &content[3..];
+        match after.find("---") {
+            Some(end_idx) => {
+                let fm = &after[..end_idx];
+                let body_start = 3 + end_idx + 3;
+                let body = content[body_start..].trim_start_matches('\n').to_string();
+                let mut map: Vec<(String, String)> = Vec::new();
+                for line in fm.lines() {
+                    let line = line.trim();
+                    if line.is_empty() || line.starts_with('#') { continue; }
+                    if let Some((k, v)) = line.split_once(':') {
+                        let k = k.trim().to_string();
+                        let v = v.trim().trim_matches('"').trim_matches('\'').trim().to_string();
+                        if !k.is_empty() {
+                            map.push((k, v));
+                        }
+                    }
+                }
+                (map, body)
+            }
+            None => (Vec::new(), content.clone()),
+        }
+    } else {
+        (Vec::new(), content.clone())
+    };
+
+    // Apply updates
+    for (key, value) in updates {
+        // Remove existing entry with this key
+        existing.retain(|(k, _)| k != &key);
+        // If value is Some, add the new value
+        if let Some(v) = value {
+            existing.push((key, v));
+        }
+    }
+
+    // Rebuild content
+    let mut new_content = String::new();
+    if !existing.is_empty() {
+        new_content.push_str("---\n");
+        for (k, v) in &existing {
+            // Quote values that need it (contain colons, etc.)
+            let needs_quote = v.contains(':') || v.contains('#') || v.starts_with('-');
+            if needs_quote {
+                new_content.push_str(&format!("{}: \"{}\"\n", k, v.replace('"', "\\\"")));
+            } else {
+                new_content.push_str(&format!("{}: {}\n", k, v));
+            }
+        }
+        new_content.push_str("---\n\n");
+    }
+    new_content.push_str(&body);
+
+    fs::write(&path, new_content).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[tauri::command]
 pub fn read_note(path: String) -> Result<String, String> {
     let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;

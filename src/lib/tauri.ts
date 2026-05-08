@@ -104,6 +104,13 @@ export async function readNoteMetadata(path: string): Promise<Record<string, str
   return invoke("read_note_metadata", { path });
 }
 
+export async function updateNoteFrontmatter(
+  path: string,
+  updates: Record<string, string | null>,
+): Promise<void> {
+  return invoke("update_note_frontmatter", { path, updates });
+}
+
 export async function saveNote(path: string, content: string): Promise<void> {
   return invoke("save_note", { path, content });
 }
