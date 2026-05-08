@@ -3,6 +3,7 @@ import { useStore } from "../../stores/store";
 import { useSortedNotes } from "../../hooks/useSortedNotes";
 import { updateVault, deleteNote, deleteFolder, readNotesBatch, renameNote, createNote, saveNote, listFolderContents } from "../../lib/tauri";
 import { NoteContent, parseCopyContent, combineCopyContent } from "./NoteContent";
+import { LinkedItemCard } from "../elysium/LinkedItemCard";
 import { readNote } from "../../lib/tauri";
 import { ViewModeSelector } from "../common/ViewModeSelector";
 import { EditModeSelector } from "../common/EditModeSelector";
@@ -772,6 +773,7 @@ export function AccordionView() {
 
               {showContent && (
                 <div className="px-3 py-3 bg-neutral-900/50 border-t border-neutral-700/30">
+                  <LinkedItemCard absolutePath={note.absolutePath} />
                   {content != null ? (
                     <NoteContent
                       content={content}

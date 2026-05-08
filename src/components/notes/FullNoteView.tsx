@@ -6,6 +6,7 @@ import { NoteContent } from "./NoteContent";
 import { ViewModeSelector } from "../common/ViewModeSelector";
 import { EditModeSelector } from "../common/EditModeSelector";
 import { ConfirmDialog } from "../common/ConfirmDialog";
+import { LinkedItemCard } from "../elysium/LinkedItemCard";
 
 export function FullNoteView() {
   const activeNoteId = useStore((s) => s.activeNoteId);
@@ -61,6 +62,7 @@ export function FullNoteView() {
           </button>
         </div>
       </div>
+      <LinkedItemCard absolutePath={note.absolutePath} />
       {content != null ? (
         <NoteContent content={content} absolutePath={note.absolutePath} editMode={noteEditMode} />
       ) : (

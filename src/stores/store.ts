@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { ElysiumConfig, LicenseConfig, NoteMeta, ShortcutsConfig, SortMode, Vault, ViewMode, WindowConfig } from "../types";
+import type { ElysiumConfig, ElysiumItem, LicenseConfig, NoteMeta, ShortcutsConfig, SortMode, Vault, ViewMode, WindowConfig } from "../types";
 
 type View = "vault-list" | "note-list" | "note-full" | "settings" | "calendar" | "search";
 
@@ -52,6 +52,8 @@ interface AppState {
   vaultSortDescending: boolean;
   vaultOrder: string[];
   elysiumConfig: ElysiumConfig;
+  elysiumItems: ElysiumItem[];
+  elysiumItemsLoadedAt: number;
   licenseConfig: LicenseConfig;
   shortcutsConfig: ShortcutsConfig;
   language: string;
@@ -62,6 +64,7 @@ interface AppState {
   setVaultSortDescending: (desc: boolean) => void;
   setVaultOrder: (order: string[]) => void;
   setElysiumConfig: (config: ElysiumConfig) => void;
+  setElysiumItems: (items: ElysiumItem[]) => void;
   setLicenseConfig: (config: LicenseConfig) => void;
   setShortcutsConfig: (config: ShortcutsConfig) => void;
   setLanguage: (lang: string) => void;
@@ -103,6 +106,8 @@ export const useStore = create<AppState>((set, get) => ({
   vaultSortDescending: true,
   vaultOrder: [],
   elysiumConfig: { enabled: false, opentimePath: "", autoImportNotes: false, hiddenTypes: [], displayMode: "separate", authorNameOverride: "", authorEmailOverride: "" },
+  elysiumItems: [],
+  elysiumItemsLoadedAt: 0,
   licenseConfig: { status: "free", licenseKey: "" },
   language: "en",
   shortcutsConfig: {
@@ -120,6 +125,7 @@ export const useStore = create<AppState>((set, get) => ({
   setVaultSortDescending: (desc) => set({ vaultSortDescending: desc }),
   setVaultOrder: (order) => set({ vaultOrder: order }),
   setElysiumConfig: (config) => set({ elysiumConfig: config }),
+  setElysiumItems: (items) => set({ elysiumItems: items, elysiumItemsLoadedAt: Date.now() }),
   setLicenseConfig: (config) => set({ licenseConfig: config }),
   setShortcutsConfig: (config) => set({ shortcutsConfig: config }),
   setLanguage: (lang) => set({ language: lang }),

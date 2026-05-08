@@ -100,6 +100,10 @@ export async function readNote(path: string): Promise<string> {
   return invoke("read_note", { path });
 }
 
+export async function readNoteMetadata(path: string): Promise<Record<string, string>> {
+  return invoke("read_note_metadata", { path });
+}
+
 export async function saveNote(path: string, content: string): Promise<void> {
   return invoke("save_note", { path, content });
 }

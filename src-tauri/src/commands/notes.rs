@@ -378,6 +378,40 @@ fn strip_frontmatter(content: &str) -> String {
     content.to_string()
 }
 
+/// Parse YAML frontmatter into a flat string map. Only handles simple key: value pairs.
+fn parse_frontmatter(content: &str) -> HashMap<String, String> {
+    let mut result = HashMap::new();
+    if !content.starts_with("---") {
+        return result;
+    }
+    let after = &content[3..];
+    let end_idx = match after.find("---") {
+        Some(i) => i,
+        None => return result,
+    };
+    let frontmatter = &after[..end_idx];
+    for line in frontmatter.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        if let Some((key, val)) = line.split_once(':') {
+            let key = key.trim().to_string();
+            let val = val.trim().trim_matches('"').trim_matches('\'').trim().to_string();
+            if !key.is_empty() && !val.is_empty() {
+                result.insert(key, val);
+            }
+        }
+    }
+    result
+}
+
+#[tauri::command]
+pub fn read_note_metadata(path: String) -> Result<HashMap<String, String>, String> {
+    let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    Ok(parse_frontmatter(&content))
+}
+
 #[tauri::command]
 pub fn read_note(path: String) -> Result<String, String> {
     let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;

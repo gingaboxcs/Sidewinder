@@ -97,6 +97,7 @@ pub fn run() {
             commands::vault::create_vault_directory,
             commands::notes::list_notes,
             commands::notes::read_note,
+            commands::notes::read_note_metadata,
             commands::notes::read_notes_batch,
             commands::notes::save_note,
             commands::notes::create_note,
