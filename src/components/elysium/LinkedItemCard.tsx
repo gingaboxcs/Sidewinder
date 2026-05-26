@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useStore } from "../../stores/store";
 import { loadElysiumItems, openInElysium, readNoteMetadata, updateNoteFrontmatter } from "../../lib/tauri";
 import { getItemIcon } from "./ElysiumIcons";
@@ -62,25 +62,35 @@ export function LinkedItemCard({ absolutePath }: Props) {
     return () => { cancelled = true; };
   }, [absolutePath]);
 
-  const linked = metadata ? pickLinkedId(metadata) : null;
+  // Memoize so the object identity is stable across renders
+  const linked = useMemo(
+    () => (metadata ? pickLinkedId(metadata) : null),
+    [metadata],
+  );
+  const linkedId = linked?.id;
+  const linkedType = linked?.type;
 
-  // Load Elysium items if needed (cache for 60s)
+  // Load Elysium items if needed (cache for 60s).
+  // Depend on primitive IDs, NOT the linked object, to avoid an infinite loop.
   useEffect(() => {
-    if (!linked || !elysiumConfig.enabled || !elysiumConfig.opentimePath) return;
+    if (!linkedId || !elysiumConfig.enabled || !elysiumConfig.opentimePath) return;
     const stale = Date.now() - elysiumItemsLoadedAt > 60_000;
     if (elysiumItems.length === 0 || stale) {
       loadElysiumItems(elysiumConfig.opentimePath)
         .then(setElysiumItems)
         .catch(() => {});
     }
-  }, [linked, elysiumConfig.enabled, elysiumConfig.opentimePath, elysiumItems.length, elysiumItemsLoadedAt, setElysiumItems]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkedId, elysiumConfig.enabled, elysiumConfig.opentimePath]);
 
   // Match the item by ID
   useEffect(() => {
-    if (!linked) { setItem(null); return; }
-    const found = elysiumItems.find((it) => it.id === linked.id);
+    if (!linkedId) { setItem(null); return; }
+    const found = elysiumItems.find((it) => it.id === linkedId);
     if (found) setItem(found);
-  }, [linked, elysiumItems]);
+  }, [linkedId, elysiumItems]);
+  // Suppress unused warning
+  void linkedType;
 
   if (!linked || !metadata) return null;
 
