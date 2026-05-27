@@ -62,7 +62,7 @@ pub struct FolderEntry {
 }
 
 /// List subfolders and notes in a specific directory (not recursive)
-#[tauri::command]
+#[tauri::command(async)]
 pub fn list_folder_contents(dir_path: String) -> Result<(Vec<FolderEntry>, Vec<NoteMeta>), String> {
     let dir = Path::new(&dir_path);
     if !dir.exists() {
@@ -222,7 +222,7 @@ pub struct SearchResult {
     pub matched_line: String,
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn search_notes(vaults: Vec<(String, String, String)>, query: String) -> Result<Vec<SearchResult>, String> {
     // vaults is Vec<(id, name, path)>
     let query_lower = query.to_lowercase();
@@ -273,7 +273,7 @@ pub fn search_notes(vaults: Vec<(String, String, String)>, query: String) -> Res
     Ok(results)
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn list_notes(vault_path: String, recursive: bool) -> Result<Vec<NoteMeta>, String> {
     let base = Path::new(&vault_path);
     if !base.exists() {
@@ -406,7 +406,7 @@ fn parse_frontmatter(content: &str) -> HashMap<String, String> {
     result
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn read_note_metadata(path: String) -> Result<HashMap<String, String>, String> {
     let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
     Ok(parse_frontmatter(&content))
@@ -478,13 +478,13 @@ pub fn update_note_frontmatter(path: String, updates: HashMap<String, Option<Str
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn read_note(path: String) -> Result<String, String> {
     let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
     Ok(strip_frontmatter(&content))
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn read_notes_batch(paths: Vec<String>) -> Result<HashMap<String, String>, String> {
     let mut results = HashMap::new();
     for path in paths {

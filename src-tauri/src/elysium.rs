@@ -139,7 +139,7 @@ struct OtDocument {
 fn default_version() -> String { "0.2".to_string() }
 
 /// Parse all .ot files in the given OpenTime directory and return schedule items
-#[tauri::command]
+#[tauri::command(async)]
 pub fn load_elysium_items(opentime_path: String) -> Result<Vec<ElysiumItem>, String> {
     let dir = Path::new(&opentime_path);
     if !dir.exists() {
@@ -316,7 +316,7 @@ fn parse_item_from_value(val: &serde_yaml::Value) -> Option<ElysiumItem> {
 }
 
 /// Load notes from the Notes/ subfolder for a specific goal/item
-#[tauri::command]
+#[tauri::command(async)]
 pub fn load_elysium_notes(opentime_path: String, goal_title: String) -> Result<Vec<ElysiumNote>, String> {
     let notes_dir = Path::new(&opentime_path).join("Notes");
     if !notes_dir.exists() {
@@ -352,7 +352,7 @@ pub fn load_elysium_notes(opentime_path: String, goal_title: String) -> Result<V
 }
 
 /// Load all notes from all goal folders
-#[tauri::command]
+#[tauri::command(async)]
 pub fn load_all_elysium_notes(opentime_path: String) -> Result<HashMap<String, Vec<ElysiumNote>>, String> {
     let notes_dir = Path::new(&opentime_path).join("Notes");
     if !notes_dir.exists() {
@@ -462,7 +462,7 @@ fn sanitize_title(title: &str) -> String {
 }
 
 /// Get all note folders from the Notes/ directory
-#[tauri::command]
+#[tauri::command(async)]
 pub fn get_elysium_note_folders(opentime_path: String) -> Result<Vec<ElysiumNoteFolder>, String> {
     let notes_dir = Path::new(&opentime_path).join("Notes");
     if !notes_dir.exists() {
