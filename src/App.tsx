@@ -223,11 +223,24 @@ function App() {
     // In-app keyboard shortcuts
     const sc = shortcutsConfig;
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger shortcuts when typing in inputs
+      const state = useStore.getState();
+      const isCmdF = (e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.code === "KeyF";
+
+      // Cmd+F always works (even when typing in a textarea/input).
+      // If a note is the active find target → find-in-note. Otherwise → vault search.
+      if (isCmdF) {
+        e.preventDefault();
+        if (state.activeFindNotePath) {
+          state.setFindOpenPath(state.activeFindNotePath);
+        } else {
+          state.setView("search");
+        }
+        return;
+      }
+
+      // Don't trigger other shortcuts when typing in inputs
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return;
-
-      const state = useStore.getState();
 
       if (matchesShortcut(e, sc.togglePanel)) {
         e.preventDefault();
@@ -238,10 +251,6 @@ function App() {
       } else if (matchesShortcut(e, sc.newFolder)) {
         e.preventDefault();
         window.dispatchEvent(new CustomEvent("sidewinder:new-folder"));
-      } else if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.code === "KeyF") {
-        // Cmd+F — search (hardcoded, not configurable to avoid conflicts)
-        e.preventDefault();
-        state.setView("search");
       } else if (matchesShortcut(e, sc.openSettings)) {
         e.preventDefault();
         state.setView("settings");

@@ -53,6 +53,14 @@ function QuickCopyButton({ absolutePath }: { absolutePath: string }) {
 
 export function AccordionView() {
   const { notes: allNotes, loadNoteContent, sortMode, refreshNotes } = useSortedNotes();
+  // Clear active find state when unmounting (leaving the view)
+  useEffect(() => {
+    return () => {
+      const s = useStore.getState();
+      s.setActiveFindNotePath(null);
+      s.setFindOpenPath(null);
+    };
+  }, []);
   const expandedNotes = useStore((s) => s.expandedNotes);
   const toggleNote = useStore((s) => s.toggleNote);
   const loadedContent = useStore((s) => s.loadedContent);

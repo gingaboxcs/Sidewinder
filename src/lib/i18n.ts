@@ -99,6 +99,11 @@ export interface Translations {
   linkToElysium: string;
   searchItems: string;
   unlinkFromElysium: string;
+  findInNote: string;
+  caseSensitive: string;
+  previousMatch: string;
+  nextMatch: string;
+  close: string;
 
   // Sort
   alphabetical: string;
@@ -369,6 +374,11 @@ const en: Translations = {
   linkToElysium: "Link to Elysium item",
   searchItems: "Search items...",
   unlinkFromElysium: "Unlink from Elysium",
+  findInNote: "Find in note...",
+  caseSensitive: "Match case",
+  previousMatch: "Previous match",
+  nextMatch: "Next match",
+  close: "Close",
 
   alphabetical: "A-Z",
   recent: "Recent",

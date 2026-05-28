@@ -1,7 +1,7 @@
 {
   "name": "sidewinder",
   "private": true,
-  "version": "0.1.43",
+  "version": "0.1.44",
   "type": "module",
   "scripts": {
     "dev": "lsof -ti:1420 | xargs kill -9 2>/dev/null; vite",

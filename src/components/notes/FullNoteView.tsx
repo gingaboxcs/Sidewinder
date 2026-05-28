@@ -29,11 +29,23 @@ export function FullNoteView() {
 
   const displayTitle = note?.filename || "Untitled";
 
+  const setActiveFindNotePath = useStore((s) => s.setActiveFindNotePath);
+  const setFindOpenPath = useStore((s) => s.setFindOpenPath);
+
   useEffect(() => {
     if (activeNoteId && content == null) {
       loadNoteContent(activeNoteId);
     }
   }, [activeNoteId, content, loadNoteContent]);
+
+  // Auto-set this as the find target when this view is open
+  useEffect(() => {
+    if (activeNoteId) setActiveFindNotePath(activeNoteId);
+    return () => {
+      setActiveFindNotePath(null);
+      setFindOpenPath(null);
+    };
+  }, [activeNoteId, setActiveFindNotePath, setFindOpenPath]);
 
   if (!note) {
     return (

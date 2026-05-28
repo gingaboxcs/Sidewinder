@@ -42,6 +42,10 @@ interface AppState {
   newlyCreatedNotePath: string | null;
   creatingNote: boolean;
   currentFolderPath: string | null;
+  /** Path of the note the user most recently interacted with (focus/click). Cmd+F targets this. */
+  activeFindNotePath: string | null;
+  /** Path of the note that currently has the in-note find UI open. */
+  findOpenPath: string | null;
 
   // UI state
   view: View;
@@ -75,6 +79,8 @@ interface AppState {
   toggleNote: (path: string) => void;
   setNewlyCreatedNotePath: (path: string | null) => void;
   setCreatingNote: (creating: boolean) => void;
+  setActiveFindNotePath: (path: string | null) => void;
+  setFindOpenPath: (path: string | null) => void;
   setCurrentFolderPath: (path: string | null) => void;
   openNoteFull: (path: string) => void;
   goBack: () => void;
@@ -97,6 +103,8 @@ export const useStore = create<AppState>((set, get) => ({
   activeNoteId: null,
   newlyCreatedNotePath: null,
   creatingNote: false,
+  activeFindNotePath: null,
+  findOpenPath: null,
   currentFolderPath: null,
   view: "vault-list",
   isSlid: false,
@@ -165,6 +173,8 @@ export const useStore = create<AppState>((set, get) => ({
 
   setNewlyCreatedNotePath: (path) => set({ newlyCreatedNotePath: path }),
   setCreatingNote: (creating) => set({ creatingNote: creating }),
+  setActiveFindNotePath: (path) => set({ activeFindNotePath: path }),
+  setFindOpenPath: (path) => set({ findOpenPath: path }),
   setCurrentFolderPath: (path) => set({ currentFolderPath: path }),
 
   openNoteFull: (path) =>

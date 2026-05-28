@@ -7,6 +7,22 @@ import { saveNote } from "../../lib/tauri";
 import { useStore } from "../../stores/store";
 import type { EditMode } from "../../types";
 import { t } from "../../lib/i18n";
+import { FindInNote } from "./FindInNote";
+
+/** Hook: registers this note as the active find target on user interaction. */
+function useFindAware(absolutePath: string) {
+  const setActiveFindNotePath = useStore((s) => s.setActiveFindNotePath);
+  const findOpenPath = useStore((s) => s.findOpenPath);
+  const setFindOpenPath = useStore((s) => s.setFindOpenPath);
+  const isFindOpen = findOpenPath === absolutePath;
+  const markActive = useCallback(() => {
+    setActiveFindNotePath(absolutePath);
+  }, [absolutePath, setActiveFindNotePath]);
+  const closeFind = useCallback(() => {
+    setFindOpenPath(null);
+  }, [setFindOpenPath]);
+  return { isFindOpen, markActive, closeFind };
+}
 
 interface Props {
   content: string;
@@ -117,7 +133,9 @@ function MarkdownEditor({ content, absolutePath, startInEditMode }: { content: s
   const [isEditing, setIsEditing] = useState(startInEditMode || content === "");
   const [editContent, setEditContent] = useState(content);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const readContentRef = useRef<HTMLDivElement>(null);
   const { saveStatus, saveError, scheduleSave, saveNow } = useAutosave(content, absolutePath);
+  const { isFindOpen, markActive, closeFind } = useFindAware(absolutePath);
 
   useEffect(() => {
     if (!isEditing) setEditContent(content);
@@ -133,11 +151,12 @@ function MarkdownEditor({ content, absolutePath, startInEditMode }: { content: s
 
   if (isEditing) {
     return (
-      <div>
+      <div onPointerDown={markActive} onFocus={markActive}>
         <div className="flex items-center gap-2 mb-2 sticky top-0 z-10 py-1" style={{ backgroundColor: "inherit" }}>
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-700/40 text-app-faint">{t("markdown")}</span>
           <SaveIndicator status={saveStatus} error={saveError} />
         </div>
+        {isFindOpen && <FindInNote textareaRef={textareaRef} onClose={closeFind} />}
         <textarea
           ref={textareaRef}
           value={editContent}
@@ -160,8 +179,9 @@ function MarkdownEditor({ content, absolutePath, startInEditMode }: { content: s
   }
 
   return (
-    <div onDoubleClick={() => setIsEditing(true)} className="cursor-text group relative">
-      <div className="markdown-content text-sm text-app leading-relaxed">
+    <div onDoubleClick={() => setIsEditing(true)} onPointerDown={markActive} className="cursor-text group relative">
+      {isFindOpen && <FindInNote contentRef={readContentRef} onClose={closeFind} />}
+      <div ref={readContentRef} className="markdown-content text-sm text-app leading-relaxed">
         <Markdown remarkPlugins={[remarkGfm, remarkBreaks]}>{content}</Markdown>
       </div>
       <button
@@ -191,7 +211,9 @@ function CodeEditor({ content, absolutePath, startInEditMode }: { content: strin
   const [editContent, setEditContent] = useState(content);
   const [isEditing, setIsEditing] = useState(startInEditMode || content === "");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const readContentRef = useRef<HTMLPreElement>(null);
   const { saveStatus, saveError, scheduleSave, saveNow } = useAutosave(content, absolutePath);
+  const { isFindOpen, markActive, closeFind } = useFindAware(absolutePath);
 
   useEffect(() => {
     if (!isEditing) setEditContent(content);
@@ -228,11 +250,12 @@ function CodeEditor({ content, absolutePath, startInEditMode }: { content: strin
 
   if (isEditing) {
     return (
-      <div>
+      <div onPointerDown={markActive} onFocus={markActive}>
         <div className="flex items-center gap-2 mb-2 sticky top-0 z-10 py-1" style={{ backgroundColor: "inherit" }}>
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-700/40 text-app-faint">{t("code")}</span>
           <SaveIndicator status={saveStatus} error={saveError} />
         </div>
+        {isFindOpen && <FindInNote textareaRef={textareaRef} onClose={closeFind} />}
         {/* Overlay approach: highlighted HTML behind, transparent textarea on top */}
         <div className="relative">
           <pre
@@ -265,8 +288,9 @@ function CodeEditor({ content, absolutePath, startInEditMode }: { content: strin
   }
 
   return (
-    <div onDoubleClick={() => setIsEditing(true)} className="cursor-text group relative">
-      <pre className="bg-black/20 rounded px-3 py-2 overflow-x-auto">
+    <div onDoubleClick={() => setIsEditing(true)} onPointerDown={markActive} className="cursor-text group relative">
+      {isFindOpen && <FindInNote contentRef={readContentRef} onClose={closeFind} />}
+      <pre ref={readContentRef} className="bg-black/20 rounded px-3 py-2 overflow-x-auto">
         <code
           className="text-xs font-mono leading-5 hljs whitespace-pre-wrap break-words"
           dangerouslySetInnerHTML={{ __html: highlightedView }}
@@ -289,8 +313,10 @@ function CodeEditor({ content, absolutePath, startInEditMode }: { content: strin
 
 function PlainTextEditor({ content, absolutePath, startInEditMode }: { content: string; absolutePath: string; startInEditMode?: boolean }) {
   const editableRef = useRef<HTMLDivElement>(null);
+  const readContentRef = useRef<HTMLDivElement>(null);
   const { saveStatus, saveError, scheduleSave, saveNow } = useAutosave(content, absolutePath);
   const [isEditing, setIsEditing] = useState(startInEditMode || content === "");
+  const { isFindOpen, markActive, closeFind } = useFindAware(absolutePath);
 
   // Populate contentEditable when entering edit mode or when content changes
   useEffect(() => {
@@ -372,8 +398,10 @@ function PlainTextEditor({ content, absolutePath, startInEditMode }: { content: 
 
   if (!isEditing) {
     return (
-      <div onDoubleClick={startEditing} className="cursor-text group relative">
+      <div onDoubleClick={startEditing} onPointerDown={markActive} className="cursor-text group relative">
+        {isFindOpen && <FindInNote contentRef={readContentRef} onClose={closeFind} />}
         <div
+          ref={readContentRef}
           className="text-sm text-app leading-relaxed plaintext-content"
           dangerouslySetInnerHTML={{ __html: content }}
         />
@@ -391,7 +419,7 @@ function PlainTextEditor({ content, absolutePath, startInEditMode }: { content: 
   }
 
   return (
-    <div>
+    <div onPointerDown={markActive} onFocus={markActive}>
       <div className="sticky top-0 z-10 py-1 mb-2" style={{ backgroundColor: "inherit" }}>
         <div className="flex items-center gap-2">
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-700/40 text-app-faint">{t("richText")}</span>
@@ -401,6 +429,7 @@ function PlainTextEditor({ content, absolutePath, startInEditMode }: { content: 
           {toolbar}
         </div>
       </div>
+      {isFindOpen && <FindInNote contentRef={editableRef} onClose={closeFind} />}
       <div
         ref={editableRef}
         contentEditable
@@ -446,7 +475,10 @@ function CopyEditor({ content, absolutePath, startInEditMode }: { content: strin
   const [notesText, setNotesText] = useState(parsed.notes);
   const [isEditing, setIsEditing] = useState(startInEditMode || content === "");
   const [copied, setCopied] = useState(false);
+  const readContentRef = useRef<HTMLDivElement>(null);
+  const notesTextareaRef = useRef<HTMLTextAreaElement>(null);
   const { saveStatus, saveError, scheduleSave, saveNow } = useAutosave(content, absolutePath);
+  const { isFindOpen, markActive, closeFind } = useFindAware(absolutePath);
 
   useEffect(() => {
     if (!isEditing) {
@@ -472,11 +504,12 @@ function CopyEditor({ content, absolutePath, startInEditMode }: { content: strin
 
   if (isEditing) {
     return (
-      <div>
+      <div onPointerDown={markActive} onFocus={markActive}>
         <div className="flex items-center gap-2 mb-2 sticky top-0 z-10 py-1" style={{ backgroundColor: "inherit" }}>
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-700/40 text-app-faint">{t("copyNote")}</span>
           <SaveIndicator status={saveStatus} error={saveError} />
         </div>
+        {isFindOpen && <FindInNote textareaRef={notesTextareaRef} onClose={closeFind} />}
         <label className="text-[10px] text-app-muted block mb-1">{t("copyContent")}</label>
         <textarea
           value={copyText}
@@ -490,6 +523,7 @@ function CopyEditor({ content, absolutePath, startInEditMode }: { content: strin
         />
         <label className="text-[10px] text-app-muted block mb-1">{t("notes")}</label>
         <textarea
+          ref={notesTextareaRef}
           value={notesText}
           onChange={(e) => { setNotesText(e.target.value); doSave(copyText, e.target.value); }}
           onBlur={() => saveNow(combineCopyContent(copyText, notesText))}
@@ -511,29 +545,32 @@ function CopyEditor({ content, absolutePath, startInEditMode }: { content: strin
   }
 
   return (
-    <div onDoubleClick={() => setIsEditing(true)} className="cursor-text group relative">
-      {copyText && (
-        <div className="mb-2">
-          <button
-            onClick={handleCopy}
-            className="flex items-center gap-1.5 text-xs px-2 py-1 rounded bg-neutral-700/50 hover:bg-neutral-700 text-app-muted hover:text-app transition-colors cursor-pointer"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-            </svg>
-            {copied ? t("copied") : t("copyToClipboard")}
-          </button>
-          <pre className="mt-2 bg-black/30 rounded px-3 py-2 overflow-x-auto text-xs font-mono text-app whitespace-pre-wrap break-words">
-            {copyText}
-          </pre>
-        </div>
-      )}
-      {notesText && (
-        <div className="markdown-content text-sm text-app leading-relaxed">
-          <Markdown remarkPlugins={[remarkGfm, remarkBreaks]}>{notesText}</Markdown>
-        </div>
-      )}
+    <div onDoubleClick={() => setIsEditing(true)} onPointerDown={markActive} className="cursor-text group relative">
+      {isFindOpen && <FindInNote contentRef={readContentRef} onClose={closeFind} />}
+      <div ref={readContentRef}>
+        {copyText && (
+          <div className="mb-2">
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-1.5 text-xs px-2 py-1 rounded bg-neutral-700/50 hover:bg-neutral-700 text-app-muted hover:text-app transition-colors cursor-pointer"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+              {copied ? t("copied") : t("copyToClipboard")}
+            </button>
+            <pre className="mt-2 bg-black/30 rounded px-3 py-2 overflow-x-auto text-xs font-mono text-app whitespace-pre-wrap break-words">
+              {copyText}
+            </pre>
+          </div>
+        )}
+        {notesText && (
+          <div className="markdown-content text-sm text-app leading-relaxed">
+            <Markdown remarkPlugins={[remarkGfm, remarkBreaks]}>{notesText}</Markdown>
+          </div>
+        )}
+      </div>
       <button
         onClick={() => setIsEditing(true)}
         className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-app-faint hover:text-app cursor-pointer"
